@@ -1,0 +1,457 @@
+:root {
+    color-scheme: light;
+    font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+    color: #18253b;
+    background: #f4f7fb;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    --navy: #172b4d;
+    --muted: #7c899d;
+    --blue: #3867e8;
+    --line: #e5eaf2;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    min-width: 320px;
+    min-height: 100vh;
+    margin: 0;
+    background:
+        radial-gradient(ellipse at 8% 9%, rgba(211, 225, 255, .58), transparent 36%),
+        radial-gradient(ellipse at 91% 94%, rgba(220, 232, 255, .48), transparent 34%),
+        #f4f7fb;
+}
+
+button,
+input {
+    font: inherit;
+}
+
+.page-shell {
+    display: grid;
+    min-height: 100vh;
+    padding: 52px 24px;
+    place-items: center;
+}
+
+.login-card {
+    display: grid;
+    width: min(100%, 1040px);
+    min-height: 650px;
+    overflow: hidden;
+    grid-template-columns: 1fr 1fr;
+    border: 1px solid rgba(225, 231, 241, .8);
+    border-radius: 24px;
+    background: #fff;
+    box-shadow: 0 28px 80px rgba(41, 66, 112, .12), 0 4px 14px rgba(36, 54, 86, .04);
+}
+
+.brand-panel {
+    position: relative;
+    display: flex;
+    min-height: 650px;
+    overflow: hidden;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 44px 48px 36px;
+    color: #fff;
+    background:
+        radial-gradient(ellipse at 75% 73%, rgba(74, 131, 246, .55), transparent 35%),
+        linear-gradient(145deg, #142647 4%, #1d3d70 56%, #23549c 100%);
+}
+
+.brand,
+.mobile-brand {
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    width: fit-content;
+    align-items: center;
+    gap: 11px;
+    color: inherit;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: -.3px;
+    text-decoration: none;
+}
+
+.brand-light {
+    margin-left: 4px;
+    font-weight: 400;
+    opacity: .72;
+}
+
+.brand-mark {
+    display: inline-flex;
+    width: 32px;
+    height: 32px;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 3px;
+    padding: 7px;
+    border: 1px solid rgba(255, 255, 255, .25);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, .12);
+}
+
+.brand-mark span {
+    width: 4px;
+    border-radius: 4px;
+    background: #fff;
+}
+
+.brand-mark span:nth-child(1) {
+    height: 9px;
+    opacity: .68;
+}
+
+.brand-mark span:nth-child(2) {
+    height: 15px;
+}
+
+.brand-mark span:nth-child(3) {
+    height: 11px;
+    opacity: .82;
+}
+
+.brand-copy {
+    position: relative;
+    z-index: 1;
+    margin-top: -24px;
+}
+
+.eyebrow {
+    display: block;
+    color: #8eaefa;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2.2px;
+}
+
+.brand-copy h1 {
+    margin: 20px 0 17px;
+    font-size: clamp(30px, 4vw, 40px);
+    font-weight: 600;
+    letter-spacing: -1.7px;
+    line-height: 1.45;
+}
+
+.brand-copy p {
+    margin: 0;
+    color: rgba(232, 239, 255, .72);
+    font-size: 14px;
+    line-height: 2;
+}
+
+.security-note {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: rgba(233, 241, 255, .76);
+    font-size: 12px;
+}
+
+.security-icon {
+    display: grid;
+    width: 21px;
+    height: 21px;
+    place-items: center;
+    border: 1px solid rgba(161, 194, 255, .55);
+    border-radius: 50%;
+    color: #b9d0ff;
+    font-size: 12px;
+}
+
+.decor {
+    position: absolute;
+    border: 1px solid rgba(191, 214, 255, .12);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.decor-one {
+    right: -154px;
+    bottom: 80px;
+    width: 430px;
+    height: 430px;
+}
+
+.decor-two {
+    right: -105px;
+    bottom: 130px;
+    width: 330px;
+    height: 330px;
+    border-color: rgba(191, 214, 255, .1);
+}
+
+.form-panel {
+    position: relative;
+    display: flex;
+    min-height: 650px;
+    align-items: center;
+    justify-content: center;
+    padding: 64px 66px 76px;
+}
+
+.form-content {
+    width: 100%;
+    max-width: 350px;
+}
+
+.mobile-brand {
+    display: none;
+    color: var(--navy);
+}
+
+.form-heading {
+    margin-bottom: 36px;
+}
+
+.form-heading .eyebrow {
+    color: #6f8bd0;
+    font-size: 9px;
+    letter-spacing: 2px;
+}
+
+.form-heading h2 {
+    margin: 12px 0 7px;
+    color: #1b2a43;
+    font-size: 29px;
+    font-weight: 600;
+    letter-spacing: -1px;
+}
+
+.form-heading p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+#login-form label {
+    display: block;
+    margin-bottom: 9px;
+    color: #34425a;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.password-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 22px;
+}
+
+.password-label label {
+    margin-bottom: 9px;
+}
+
+.input-wrap {
+    display: flex;
+    height: 50px;
+    align-items: center;
+    gap: 11px;
+    padding: 0 14px;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    background: #fbfcfe;
+    transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
+}
+
+.input-wrap:focus-within {
+    border-color: #8ca9f3;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(56, 103, 232, .1);
+}
+
+.input-icon {
+    display: flex;
+    width: 17px;
+    flex: 0 0 17px;
+    color: #9aa7ba;
+}
+
+.input-icon svg {
+    width: 17px;
+    height: 17px;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.6;
+}
+
+.input-wrap input {
+    width: 100%;
+    min-width: 0;
+    height: 100%;
+    border: 0;
+    outline: 0;
+    color: #24334d;
+    background: transparent;
+    font-size: 13px;
+}
+
+.input-wrap input::placeholder {
+    color: #aab4c3;
+}
+
+.password-toggle {
+    padding: 4px 0 4px 8px;
+    border: 0;
+    color: #8491a5;
+    background: transparent;
+    cursor: pointer;
+    font-size: 11px;
+    white-space: nowrap;
+}
+
+.password-toggle:hover {
+    color: var(--blue);
+}
+
+.form-message {
+    min-height: 20px;
+    margin: 11px 0 8px;
+    color: #d34e58;
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.form-message.success {
+    color: #258266;
+}
+
+.submit-button {
+    display: flex;
+    width: 100%;
+    height: 49px;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    border: 0;
+    border-radius: 9px;
+    color: #fff;
+    background: linear-gradient(100deg, #3867e8, #4b79ee);
+    box-shadow: 0 8px 17px rgba(56, 103, 232, .22);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: transform .18s ease, box-shadow .18s ease, opacity .18s ease;
+}
+
+.submit-button:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 11px 22px rgba(56, 103, 232, .28);
+}
+
+.submit-button:focus-visible,
+.password-toggle:focus-visible {
+    outline: 3px solid rgba(56, 103, 232, .28);
+    outline-offset: 3px;
+}
+
+.submit-button:disabled {
+    cursor: wait;
+    opacity: .72;
+}
+
+.button-arrow {
+    font-size: 18px;
+    font-weight: 400;
+    line-height: 1;
+}
+
+.form-footer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 29px;
+    color: #9aa5b5;
+    font-size: 10px;
+}
+
+.footer-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #62b79d;
+    box-shadow: 0 0 0 3px rgba(98, 183, 157, .12);
+}
+
+.copyright {
+    position: absolute;
+    right: 24px;
+    bottom: 23px;
+    color: #a4aebb;
+    font-size: 10px;
+}
+
+@media (max-width: 760px) {
+    .page-shell {
+        padding: 24px 16px;
+    }
+
+    .login-card {
+        width: min(100%, 470px);
+        min-height: auto;
+        grid-template-columns: 1fr;
+        border-radius: 18px;
+    }
+
+    .brand-panel {
+        display: none;
+    }
+
+    .form-panel {
+        min-height: 590px;
+        padding: 40px 32px 66px;
+    }
+
+    .mobile-brand {
+        display: inline-flex;
+        margin-bottom: 44px;
+        font-size: 14px;
+    }
+
+    .mobile-brand .brand-mark {
+        border-color: #e1e8f5;
+        background: #f3f6fc;
+    }
+
+    .mobile-brand .brand-mark span {
+        background: #416de0;
+    }
+
+    .form-heading {
+        margin-bottom: 32px;
+    }
+
+    .copyright {
+        right: 0;
+        bottom: 23px;
+        left: 0;
+        text-align: center;
+    }
+}
+
+@media (max-width: 380px) {
+    .form-panel {
+        padding-right: 22px;
+        padding-left: 22px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        scroll-behavior: auto !important;
+        transition-duration: .01ms !important;
+    }
+}

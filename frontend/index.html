@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f4f7fb">
+    <title>登录 · OPA Permission</title>
+    <link rel="stylesheet" href="./styles.css">
+    <script src="./app.js" defer></script>
+</head>
+<body>
+<main class="page-shell">
+    <section class="login-card" aria-labelledby="page-title">
+        <div class="brand-panel">
+            <a class="brand" href="#" aria-label="OPA Permission 首页">
+                <span class="brand-mark" aria-hidden="true">
+                    <span></span><span></span><span></span>
+                </span>
+                <span>OPA<span class="brand-light">Permission</span></span>
+            </a>
+
+            <div class="brand-copy">
+                <span class="eyebrow">ACCESS CONTROL</span>
+                <h1>让每一次访问<br>都恰到好处。</h1>
+                <p>集中管理身份、角色与权限，<br>为每个请求提供清晰可靠的访问边界。</p>
+            </div>
+
+            <div class="security-note">
+                <span class="security-icon" aria-hidden="true">✓</span>
+                <span>安全连接 · 权限保护</span>
+            </div>
+
+            <div class="decor decor-one" aria-hidden="true"></div>
+            <div class="decor decor-two" aria-hidden="true"></div>
+        </div>
+
+        <div class="form-panel">
+            <div class="form-content">
+                <div class="mobile-brand">
+                    <span class="brand-mark" aria-hidden="true">
+                        <span></span><span></span><span></span>
+                    </span>
+                    <span>OPA<span class="brand-light">Permission</span></span>
+                </div>
+
+                <div class="form-heading">
+                    <span class="eyebrow">WELCOME BACK</span>
+                    <h2 id="page-title">欢迎回来</h2>
+                    <p>使用您的账户登录管理平台</p>
+                </div>
+
+                <form id="login-form" novalidate>
+                    <label for="username">用户名</label>
+                    <div class="input-wrap">
+                        <span class="input-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none">
+                                <circle cx="12" cy="8" r="3.5"></circle>
+                                <path d="M5 20c.7-3.2 3.1-5 7-5s6.3 1.8 7 5"></path>
+                            </svg>
+                        </span>
+                        <input id="username" name="username" type="text" placeholder="请输入用户名"
+                               autocomplete="username" required autofocus>
+                    </div>
+
+                    <div class="password-label">
+                        <label for="password">密码</label>
+                    </div>
+                    <div class="input-wrap">
+                        <span class="input-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none">
+                                <rect x="5" y="10" width="14" height="10" rx="2"></rect>
+                                <path d="M8 10V7a4 4 0 0 1 8 0v3"></path>
+                                <path d="M12 14v2"></path>
+                            </svg>
+                        </span>
+                        <input id="password" name="password" type="password" placeholder="请输入密码"
+                               autocomplete="current-password" required>
+                        <button class="password-toggle" id="password-toggle" type="button"
+                                aria-label="显示密码" aria-pressed="false">显示</button>
+                    </div>
+
+                    <p class="form-message" id="form-message" role="status" aria-live="polite"></p>
+                    <button class="submit-button" id="submit-button" type="submit">
+                        <span class="button-label">登录</span>
+                        <span class="button-arrow" aria-hidden="true">→</span>
+                    </button>
+                </form>
+
+                <div class="form-footer">
+                    <span class="footer-dot" aria-hidden="true"></span>
+                    <span>您的访问将受到基于角色的权限保护</span>
+                </div>
+            </div>
+            <span class="copyright">© 2026 OPA Permission</span>
+        </div>
+    </section>
+</main>
+</body>
+</html>

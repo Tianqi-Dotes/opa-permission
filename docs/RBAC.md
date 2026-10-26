@@ -1,0 +1,7 @@
+## Spring Security RBAC
+
+Authentication uses `POST /auth/login` with a JSON body containing `username` and `password`. Successful login returns `accessToken`, `tokenType`, and `expiresIn`; send the token as `Authorization: Bearer <accessToken>`. User credentials are stored in `test.users`; `password_hash` must contain a BCrypt hash. Set `JWT_SECRET_BASE64` to a Base64-encoded random secret of at least 32 bytes (for example, generate one with PowerShell: `[Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))`). All non-login requests require an active permission matching both the request path and HTTP method. Requests without a matching permission are denied.
+
+Permissions may be assigned directly through `test.relation_user_permissions` or through a role using `test.relation_user_roles` and `test.relation_role_permissions`. Inactive permissions and roles are ignored. A grant with a null `tenant_id` is global; otherwise it applies only when it matches the authenticated user's fixed tenant.
+
+`resource_pattern` uses Spring's Ant-style path patterns (for example `/api/orders/**`). A null or blank `http_method` matches any method; a null or blank resource pattern never grants access. No role/permission administration endpoints or initial user are created by this change; provision BCrypt password hashes and permission rows through your deployment or administration process. Serve the API over HTTPS in production.

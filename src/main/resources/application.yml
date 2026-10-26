@@ -1,0 +1,27 @@
+server:
+  port: 1111
+
+spring:
+  datasource:
+    url: jdbc:postgresql://${PGHOST:localhost}:${PGPORT:5432}/${PGDATABASE:postgres}
+    username: ${PGUSER:postgres}
+    password: ${PGPASSWORD:123456}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      pool-name: OpaPermissionHikariPool
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  type-aliases-package: com.opa.permission.model
+  configuration:
+    map-underscore-to-camel-case: true
+
+security:
+  jwt:
+    secret-base64: ${JWT_SECRET_BASE64:}
+    expiration-seconds: 900

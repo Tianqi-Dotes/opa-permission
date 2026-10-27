@@ -60,9 +60,7 @@ form.addEventListener("submit", async (event) => {
         }
 
         sessionStorage.setItem("accessToken", result.accessToken);
-        message.textContent = "登录成功，访问令牌已保存到当前标签页。";
-        message.classList.add("success");
-        passwordInput.value = "";
+        window.location.assign("./dashboard.html");
     } catch (error) {
         message.textContent = error instanceof TypeError
             ? "无法连接认证服务，请检查服务地址和跨域配置。"

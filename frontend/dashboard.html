@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f4f7fb">
+    <title>Workspace · OPA Permission</title>
+    <link rel="stylesheet" href="./dashboard.css">
+    <script src="./dashboard.js" defer></script>
+</head>
+<body>
+<div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+        <a class="brand" href="./dashboard.html" aria-label="OPA Permission workspace">
+            <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
+            <span>OPA<span class="brand-light">Permission</span></span>
+        </a>
+
+        <div class="workspace-label">WORKSPACE</div>
+        <nav class="main-nav" aria-label="Main menu">
+            <button class="nav-item active" type="button" data-page="assign-roles" aria-current="page">
+                <span class="nav-icon" aria-hidden="true">AR</span>
+                <span>Assign Roles</span>
+            </button>
+            <button class="nav-item" type="button" data-page="test-permissions">
+                <span class="nav-icon" aria-hidden="true">TP</span>
+                <span>Test Permissions</span>
+            </button>
+            <button class="nav-item" type="button" data-page="assign-policy">
+                <span class="nav-icon" aria-hidden="true">AP</span>
+                <span>Assign Policy</span>
+            </button>
+            <button class="nav-item" type="button" data-page="query-trino">
+                <span class="nav-icon" aria-hidden="true">QT</span>
+                <span>Query Trino</span>
+            </button>
+            <button class="nav-item" type="button" data-page="create-trino-table">
+                <span class="nav-icon" aria-hidden="true">CT</span>
+                <span>Create Trino Table</span>
+            </button>
+        </nav>
+
+        <div class="sidebar-bottom">
+            <div class="secure-label"><span class="status-dot"></span>Access protected</div>
+            <button class="logout-button" id="logout-button" type="button">
+                <span aria-hidden="true">↗</span> Sign out
+            </button>
+        </div>
+    </aside>
+
+    <main class="main-area">
+        <header class="topbar">
+            <button class="mobile-menu-button" id="mobile-menu-button" type="button"
+                    aria-label="Open navigation menu" aria-expanded="false">☰</button>
+            <div class="breadcrumb"><span>Workspace</span><span class="breadcrumb-separator">/</span>
+                <strong id="breadcrumb-page">Assign Roles</strong></div>
+            <div class="user-chip">
+                <span class="avatar" id="user-avatar">U</span>
+                <span class="user-name" id="user-name">User</span>
+            </div>
+        </header>
+
+        <section class="content-area" aria-live="polite">
+            <div class="page-heading">
+                <span class="page-kicker">ACCESS MANAGEMENT</span>
+                <h1 id="page-title">Assign Roles</h1>
+                <p id="page-description">Manage role assignments for users in your workspace.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-symbol" id="feature-symbol" aria-hidden="true">AR</div>
+                <div class="feature-copy">
+                    <span class="feature-status"><span class="status-dot"></span> WORKSPACE</span>
+                    <h2 id="feature-title">Role assignment</h2>
+                    <p id="feature-description">
+                        Select a workspace tool from the menu to get started. Feature forms will appear here.
+                    </p>
+                </div>
+                <div class="card-decoration" aria-hidden="true"></div>
+            </div>
+
+            <div class="info-row">
+                <span class="info-icon" aria-hidden="true">i</span>
+                <p>Access to each feature is controlled by your assigned roles and permissions.</p>
+            </div>
+            <footer class="page-footer">OPA Permission <span>·</span> Secure access management</footer>
+        </section>
+    </main>
+</div>
+</body>
+</html>

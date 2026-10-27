@@ -1,3 +1,5 @@
+CREATE SCHEMA IF NOT EXISTS test;
+
 CREATE TABLE IF NOT EXISTS test.roles (
                                           role_id                 BIGINT PRIMARY KEY,
     -- role_code            VARCHAR(128) NOT NULL UNIQUE,
@@ -61,3 +63,25 @@ CREATE TABLE IF NOT EXISTS test.users (
     created_time            BIGINT NOT NULL,
     updated_time            BIGINT NOT NULL
 );
+
+INSERT INTO test.permissions (
+    permission_id,
+    permission_name,
+    resource_pattern,
+    http_method,
+    status,
+    description,
+    created_time,
+    updated_time
+) VALUES
+    (1, 'Query Trino', '/api/trino/query', 'POST', 'active', 'Run a read-only Trino query', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
+    (2, 'Create Trino Catalog', '/api/trino/catalogs', 'POST', 'active', 'Create a Trino catalog', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
+    (3, 'Create Trino Schema', '/api/trino/schemas', 'POST', 'active', 'Create a Trino schema', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
+    (4, 'Create Trino Table', '/api/trino/tables', 'POST', 'active', 'Create a Trino table', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT)
+ON CONFLICT (permission_id) DO UPDATE SET
+    permission_name = EXCLUDED.permission_name,
+    resource_pattern = EXCLUDED.resource_pattern,
+    http_method = EXCLUDED.http_method,
+    status = EXCLUDED.status,
+    description = EXCLUDED.description,
+    updated_time = EXCLUDED.updated_time;

@@ -17,4 +17,22 @@ INSERT INTO test.users (
     'active',
     (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT,
     (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT
+), (
+    2,
+    'rick',
+    '$2a$10$ssJj4pyTenmUp4veu2m6i.nf8tkV.u4ihqeg.ptfu.vHrYaHPMrAa',
+    1,
+    'active',
+    (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT,
+    (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT
+), (
+    3,
+    'sam',
+    '$2a$10$ssJj4pyTenmUp4veu2m6i.nf8tkV.u4ihqeg.ptfu.vHrYaHPMrAa',
+    1,
+    'active',
+    (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT,
+    (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT
 )
+;
+

@@ -64,6 +64,28 @@ CREATE TABLE IF NOT EXISTS test.users (
     updated_time            BIGINT NOT NULL
 );
 
+create table if not exists test.tenants (
+    tenant_id               BIGINT PRIMARY KEY,
+    tenant_name             VARCHAR(256) NOT NULL UNIQUE,
+    status                  VARCHAR(32) NOT NULL DEFAULT 'active',
+    created_time            BIGINT NOT NULL,
+    updated_time            BIGINT NOT NULL
+);
+
+insert into test.tenants (
+    tenant_id,
+    tenant_name,
+    status,
+    created_time,
+    updated_time
+) values (
+    1,
+    'dpaas',
+    'active',
+    (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT,
+    (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT
+);
+
 INSERT INTO test.permissions (
     permission_id,
     permission_name,
@@ -77,7 +99,9 @@ INSERT INTO test.permissions (
     (1, 'Query Trino', '/api/trino/query', 'POST', 'active', 'Run a read-only Trino query', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
     (2, 'Create Trino Catalog', '/api/trino/catalogs', 'POST', 'active', 'Create a Trino catalog', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
     (3, 'Create Trino Schema', '/api/trino/schemas', 'POST', 'active', 'Create a Trino schema', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
-    (4, 'Create Trino Table', '/api/trino/tables', 'POST', 'active', 'Create a Trino table', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT)
+    (4, 'Create Trino Table', '/api/trino/tables', 'POST', 'active', 'Create a Trino table', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
+    (5, 'List Users', '/api/permissions/users', 'GET', 'active', 'List users in the authenticated user tenant', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
+    (6, 'Assign User Role', '/api/permissions/users/*/roles', 'POST', 'active', 'Assign a role to a user in the authenticated user tenant', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT)
 ON CONFLICT (permission_id) DO UPDATE SET
     permission_name = EXCLUDED.permission_name,
     resource_pattern = EXCLUDED.resource_pattern,

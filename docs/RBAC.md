@@ -4,11 +4,15 @@ Authentication uses `POST /auth/login` with a JSON body containing `username` an
 
 Permissions may be assigned directly through `test.relation_user_permissions` or through a role using `test.relation_user_roles` and `test.relation_role_permissions`. Inactive permissions and roles are ignored. A grant with a null `tenant_id` is global; otherwise it applies only when it matches the authenticated user's fixed tenant.
 
-`resource_pattern` uses Spring's Ant-style path patterns (for example `/api/orders/**`). A null or blank `http_method` matches any method; a null or blank resource pattern never grants access. No role/permission administration endpoints or initial user are created by this change; provision BCrypt password hashes and permission rows through your deployment or administration process. Serve the API over HTTPS in production.
+`resource_pattern` uses Spring's Ant-style path patterns (for example `/api/orders/**`). A null or blank `http_method` matches any method; a null or blank resource pattern never grants access. Provision BCrypt password hashes and permission rows through your deployment or administration process. Serve the API over HTTPS in production.
+
+`GET /api/permissions/users` returns `userId`, `username`, `tenantId`, and `status` for users in the authenticated user's tenant only. The response omits password hashes. Protect it with an active permission matching `/api/permissions/users` and method `GET`.
 
 The Trino query endpoint is `POST /api/trino/query` with a JSON body such as `{"sql":"SELECT 1"}` and the caller's `Authorization: Bearer <accessToken>` header. The application forwards that same JWT to Trino using the JDBC `accessToken` property; the Trino coordinator must trust the application JWT signing key, use the matching issuer (`opa-permission`), and have TLS enabled. Configure `TRINO_JDBC_URL` with TLS (the default is `jdbc:trino://localhost:8443?SSL=true`). Trino derives its principal from the JWT subject (`sub`, the login username). The query endpoint accepts one `SELECT` or `WITH` query, returns at most `trino.query.max-rows` rows, and uses `trino.query.timeout-seconds` as the JDBC query timeout. Access is authorized by both application RBAC and Trino's own access-control rules. Grant the endpoint to users through a permission with resource pattern `/api/trino/query` and HTTP method `POST`.
 
 Assign an active role to a user with `POST /api/permissions/users/{userId}/roles` and JSON body `{"roleId":123}`. The authenticated user's tenant must match the target user's tenant; the association records the target tenant and authenticated user as `grant_by`. Duplicate assignments return HTTP 409. Protect this endpoint with an RBAC permission matching `/api/permissions/users/*/roles` and method `POST`.
+
+The dashboard's **Assign Roles** page first loads the authenticated user's tenant through `GET /api/permissions/users`, then submits the selected user and role to `POST /api/permissions/users/{userId}/roles`. The role choices use the default seed IDs: ADMIN `2`, ANALYST `3`, and DEVELOPER `1`. The default ADMIN role must have both the user-list and role-assignment permissions.
 
 # PREREQUISITES:
 ADMIN is ADMIN ROLE.
@@ -30,3 +34,8 @@ DEVELOPER has permission to create trino catalog, schema, and table.
 The DDL endpoints use `POST` and return HTTP 201 on success. Create a catalog at `/api/trino/catalogs` with `{"catalogName":"pg","connectorName":"postgresql","properties":{"connection-url":"jdbc:postgresql://db:5432/app","connection-user":"reader","connection-password":"${ENV:PG_PASSWORD}"}}`. Trino logs complete `CREATE CATALOG` statements, so secret-valued properties and DDL values must use Trino environment references such as `${ENV:PG_PASSWORD}`; configure the referenced environment variable on the Trino coordinator.
 
 Create a schema at `/api/trino/schemas` with `{"catalogName":"iceberg","schemaName":"analytics","location":"s3://warehouse/analytics","ifNotExists":true}`; `location` is optional. Create a table at `/api/trino/tables` with `{"catalogName":"iceberg","schemaName":"analytics","tableName":"events","columns":[{"name":"id","type":"BIGINT"},{"name":"name","type":"VARCHAR(100)"}],"properties":{"format":"PARQUET"},"ifNotExists":true}`. Table columns support primitive Trino types, and table properties are optional string values. Trino's own access-control rules must also allow the operations.
+
+The dashboard's **Test Permissions** page checks these four `POST` endpoints for the currently signed-in user. It sends intentionally incomplete request bodies: HTTP 400 means the request reached endpoint validation and was authorized, while HTTP 403 means RBAC denied access. These checks do not execute Trino queries or DDL. Sign in as the user being tested before running them.
+
+## npx http-server frontend -p 5500
+npx http-server -p 5500

@@ -40,7 +40,9 @@ WITH missing_role_permissions AS (
                 'Query Trino',
                 'Create Trino Catalog',
                 'Create Trino Schema',
-                'Create Trino Table'
+                'Create Trino Table',
+                'List Users',
+                'Assign User Role'
             ))
        OR (r.role_name = 'ANALYST' AND p.permission_name = 'Query Trino')
        OR (r.role_name = 'DEVELOPER'

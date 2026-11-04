@@ -67,7 +67,7 @@
                 <p id="page-description">Manage role assignments for users in your workspace.</p>
             </div>
 
-            <div class="feature-card">
+            <div class="feature-card" id="feature-card" hidden>
                 <div class="feature-symbol" id="feature-symbol" aria-hidden="true">AR</div>
                 <div class="feature-copy">
                     <span class="feature-status"><span class="status-dot"></span> WORKSPACE</span>
@@ -79,7 +79,56 @@
                 <div class="card-decoration" aria-hidden="true"></div>
             </div>
 
-            <div class="info-row">
+            <div class="assign-role-panel" id="assign-role-panel">
+                <div class="assign-role-header">
+                    <div>
+                        <h2>Assign a role to a user</h2>
+                        <p>Load users in your tenant, then select a user and role to assign.</p>
+                    </div>
+                    <button class="secondary-button" id="refresh-users" type="button">Load users</button>
+                </div>
+                <form id="assign-role-form">
+                    <label class="form-field">
+                        <span>User</span>
+                        <select id="assign-role-user" name="userId" required>
+                            <option value="">Load users to choose a user</option>
+                        </select>
+                    </label>
+                    <label class="form-field">
+                        <span>Role</span>
+                        <select id="assign-role-role" name="roleId" required>
+                            <option value="">Select a role</option>
+                            <option value="2">ADMIN</option>
+                            <option value="3">ANALYST</option>
+                            <option value="1">DEVELOPER</option>
+                        </select>
+                    </label>
+                    <button class="primary-button" id="assign-role-submit" type="submit">Assign role</button>
+                </form>
+                <p class="assign-role-status" id="assign-role-status" role="status" aria-live="polite">
+                    Load the user list to begin.
+                </p>
+            </div>
+
+            <div class="permission-test-panel" id="permission-test-panel" hidden>
+                <div class="permission-test-header">
+                    <div>
+                        <h2>Trino API permission checks</h2>
+                        <p>Checks the permissions of the currently signed-in user.</p>
+                    </div>
+                    <button class="primary-button" id="run-all-permission-tests" type="button">Run all checks</button>
+                </div>
+                <p class="permission-test-note">
+                    Checks send incomplete request bodies. HTTP 400 means permission was granted and validation was
+                    reached; HTTP 403 means access was denied. No Trino query or DDL is executed.
+                </p>
+                <div class="permission-test-list" id="permission-test-list"></div>
+                <p class="permission-test-summary" id="permission-test-summary" role="status" aria-live="polite">
+                    No checks run yet.
+                </p>
+            </div>
+
+            <div class="info-row" id="info-row" hidden>
                 <span class="info-icon" aria-hidden="true">i</span>
                 <p>Access to each feature is controlled by your assigned roles and permissions.</p>
             </div>

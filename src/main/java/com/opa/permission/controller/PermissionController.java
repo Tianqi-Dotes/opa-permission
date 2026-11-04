@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.util.StringUtils;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Instant;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/permissions")
@@ -36,8 +38,28 @@ public class PermissionController {
         this.userRoleService = userRoleService;
     }
 
+    @GetMapping("/users")
+    public ResponseEntity<?> listUsers(@AuthenticationPrincipal Jwt jwt) {
+        if (jwt == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new ApiError("A valid bearer token is required"));
+        }
+
+        Long tenantId = longClaim(jwt, "tenant_id");
+        if (tenantId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new ApiError("The bearer token is missing the tenant_id claim"));
+        }
+
+        List<UserSummary> users = userAccountService.listByTenantId(tenantId).stream()
+                .map(user -> new UserSummary(user.getUserId(), user.getUsername(),
+                        user.getTenantId(), user.getStatus()))
+                .toList();
+        return ResponseEntity.ok(users);
+    }
+
     @PostMapping("/users/{userId}/roles")
-    public ResponseEntity<?> assignRole(@PathVariable Long userId,
+    public ResponseEntity<?> assignRole(@PathVariable("userId") Long userId,
                                         @RequestBody(required = false) AssignRoleRequest request,
                                         @AuthenticationPrincipal Jwt jwt) {
         if (request == null || request.roleId() == null) {
@@ -99,6 +121,9 @@ public class PermissionController {
     }
 
     public record AssignRoleRequest(Long roleId) {
+    }
+
+    public record UserSummary(Long userId, String username, Long tenantId, String status) {
     }
 
     public record RoleAssignmentResponse(Long id, Long userId, Long roleId, Long tenantId, Long grantBy) {

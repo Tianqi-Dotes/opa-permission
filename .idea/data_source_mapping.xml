@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="DataSourcePerFileMappings">
+    <file url="file://$PROJECT_DIR$/ddl/abac.sql" value="30f58692-2054-4d30-957b-1c5d56ffc141" />
     <file url="file://$PROJECT_DIR$/ddl/ddl.sql" value="30f58692-2054-4d30-957b-1c5d56ffc141" />
+    <file url="file://$PROJECT_DIR$/ddl/demodata.sql" value="30f58692-2054-4d30-957b-1c5d56ffc141" />
     <file url="file://$PROJECT_DIR$/ddl/seed_default_role_assignments.sql" value="30f58692-2054-4d30-957b-1c5d56ffc141" />
     <file url="file://$PROJECT_DIR$/ddl/seed_default_roles.sql" value="30f58692-2054-4d30-957b-1c5d56ffc141" />
     <file url="file://$PROJECT_DIR$/ddl/seed_default_user.sql" value="30f58692-2054-4d30-957b-1c5d56ffc141" />

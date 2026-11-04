@@ -3,7 +3,6 @@
 -- CV/SALARY
 -- BUCKET:A/B
 -- resource_type:BUCKET,resource_name:A
-CREATE SCHEMA IF NOT EXISTS test;
 
 CREATE TABLE IF NOT EXISTS test.resources (
                                          id                  BIGSERIAL PRIMARY KEY,
@@ -12,8 +11,8 @@ CREATE TABLE IF NOT EXISTS test.resources (
                                          resource_name       VARCHAR(256),
                                          owner               VARCHAR(128),
                                          status              VARCHAR(32) NOT NULL DEFAULT 'active',
-                                         created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                                         updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                                         create_time         BIGINT NOT NULL,
+                                         update_time         BIGINT NOT NULL
 );
 
 -- 2) Attribute model
@@ -31,8 +30,8 @@ CREATE TABLE IF NOT EXISTS test.attribute_definitions (
                                                      data_type           VARCHAR(32) NOT NULL,
                                                      multi_valued        BOOLEAN NOT NULL DEFAULT FALSE,
                                                      description         TEXT,
-                                                     created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                                                     updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                                                     create_time         BIGINT NOT NULL,
+                                                     update_time         BIGINT NOT NULL,
                                                      CONSTRAINT ck_attribute_category
                                                          CHECK (category IN ('subject', 'resource', 'environment', 'action')),
                                                      CONSTRAINT ck_attribute_data_type
@@ -44,30 +43,6 @@ ALTER TABLE test.attribute_definitions
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_attribute_category_name
     ON test.attribute_definitions (category, name);
-
--- Describes where runtime attributes come from. Keep credentials in a secret
--- manager and store only a secret reference in source_config_json.
--- CREATE TABLE IF NOT EXISTS test.abac_attribute_sources (
---     id                  BIGSERIAL PRIMARY KEY,
---     attribute_id        BIGINT NOT NULL,
---     source_code         VARCHAR(128) NOT NULL,
---     source_type         VARCHAR(32) NOT NULL,
---     source_config_json  JSONB NOT NULL DEFAULT '{}'::JSONB,
---     cache_ttl_seconds   INTEGER NOT NULL DEFAULT 0,
---     fail_strategy       VARCHAR(32) NOT NULL DEFAULT 'deny',
---     enabled             BOOLEAN NOT NULL DEFAULT TRUE,
---     created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
---     updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
---     CONSTRAINT uq_abac_attribute_source
---         UNIQUE (attribute_id, source_code),
---     CONSTRAINT ck_abac_attribute_source_type
---         CHECK (source_type IN ('user_table', 'request_header', 'request_param', 'jwt_claim', 'http', 'sql', 'static')),
---     CONSTRAINT ck_abac_attribute_source_cache_ttl
---         CHECK (cache_ttl_seconds >= 0),
---     CONSTRAINT ck_abac_attribute_source_fail_strategy
---         CHECK (fail_strategy IN ('deny', 'use_default', 'skip'))
--- );
-
 
 -- Purpose: Stores concrete attribute values for subjects.
 -- subject_id:1,attribute_id:1,value:dpaas
@@ -81,8 +56,8 @@ CREATE TABLE IF NOT EXISTS test.subject_attribute_values (
                                                         value_json          JSONB,
                                                         valid_from          TIMESTAMPTZ,
                                                         valid_to            TIMESTAMPTZ,
-                                                        created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                                                        updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                                                        create_time         BIGINT NOT NULL,
+                                                        update_time         BIGINT NOT NULL,
                                                         CONSTRAINT ck_subject_attr_value_not_both_null
                                                             CHECK (value_text IS NOT NULL OR value_json IS NOT NULL),
                                                         CONSTRAINT ck_subject_attr_validity
@@ -106,8 +81,8 @@ CREATE TABLE IF NOT EXISTS test.resource_attribute_values (
                                                          value_json          JSONB,
                                                          valid_from          TIMESTAMPTZ,
                                                          valid_to            TIMESTAMPTZ,
-                                                         created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                                                         updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                                                         create_time         BIGINT NOT NULL,
+                                                         update_time         BIGINT NOT NULL,
                                                          CONSTRAINT ck_resource_attr_value_not_both_null
                                                              CHECK (value_text IS NOT NULL OR value_json IS NOT NULL),
                                                          CONSTRAINT ck_resource_attr_validity
@@ -141,8 +116,8 @@ CREATE TABLE IF NOT EXISTS test.environment_context_rules (
                                                          priority            INTEGER NOT NULL DEFAULT 100,
                                                          enabled             BOOLEAN NOT NULL DEFAULT TRUE,
                                                          description         TEXT,
-                                                         created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                                                         updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                                                         create_time         BIGINT NOT NULL,
+                                                         update_time         BIGINT NOT NULL,
                                                          CONSTRAINT ck_env_rule_source_type
                                                              CHECK (source_type IN ('request_header', 'jwt_claim', 'request_param', 'fixed', 'http', 'sql')),
                                                          CONSTRAINT ck_env_rule_scope_level
@@ -158,15 +133,15 @@ CREATE TABLE IF NOT EXISTS test.abac_actions (
     action_name     VARCHAR(256) NOT NULL,
     description     TEXT,
     status          VARCHAR(32) NOT NULL DEFAULT 'active',
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    create_time     BIGINT NOT NULL,
+    update_time     BIGINT NOT NULL,
     CONSTRAINT ck_abac_action_status
         CHECK (status IN ('active', 'disabled'))
 );
 
 -- The single configuration record contains the generated Rego file.
 CREATE TABLE IF NOT EXISTS test.abac_policy_config (
-    config_id               SMALLINT PRIMARY KEY DEFAULT 1 CHECK (config_id = 1),
+    config_id               BIGINT PRIMARY KEY DEFAULT 1 CHECK (config_id = 1),
     config_name             VARCHAR(128) NOT NULL DEFAULT 'authz.rego',
     entrypoint              VARCHAR(256) NOT NULL DEFAULT 'authz/allow',
     combining_algorithm     VARCHAR(32) NOT NULL DEFAULT 'deny_overrides',
@@ -177,8 +152,8 @@ CREATE TABLE IF NOT EXISTS test.abac_policy_config (
     created_by              BIGINT,
     updated_by              BIGINT,
     generated_at            TIMESTAMPTZ,
-    created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    create_time             BIGINT NOT NULL,
+    update_time             BIGINT NOT NULL,
     CONSTRAINT ck_abac_config_combining_algorithm
         CHECK (combining_algorithm IN ('deny_overrides', 'permit_overrides', 'first_applicable')),
     CONSTRAINT ck_abac_config_generation_status
@@ -196,7 +171,7 @@ ON CONFLICT (config_id) DO NOTHING;
 -- Generate Rego from this validated structure; do not concatenate user text as Rego.
 CREATE TABLE IF NOT EXISTS test.abac_policy_rules (
     id                  BIGSERIAL PRIMARY KEY,
-    config_id           SMALLINT NOT NULL DEFAULT 1,
+    config_id           BIGINT NOT NULL DEFAULT 1,
     rule_code           VARCHAR(128) NOT NULL,
     rule_name           VARCHAR(256) NOT NULL,
     effect              VARCHAR(16) NOT NULL,
@@ -204,8 +179,8 @@ CREATE TABLE IF NOT EXISTS test.abac_policy_rules (
     enabled             BOOLEAN NOT NULL DEFAULT TRUE,
     condition_json      JSONB NOT NULL,
     description         TEXT,
-    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    create_time         BIGINT NOT NULL,
+    update_time         BIGINT NOT NULL,
     CONSTRAINT uq_abac_policy_rule_code
         UNIQUE (config_id, rule_code),
     CONSTRAINT ck_abac_policy_rule_effect
@@ -220,7 +195,7 @@ CREATE INDEX IF NOT EXISTS idx_abac_policy_rules_config_enabled_priority
 -- Regression cases let the UI validate the current configuration.
 CREATE TABLE IF NOT EXISTS test.abac_policy_test_cases (
     id                  BIGSERIAL PRIMARY KEY,
-    config_id           SMALLINT NOT NULL DEFAULT 1,
+    config_id           BIGINT NOT NULL DEFAULT 1,
     case_name           VARCHAR(256) NOT NULL,
     input_json          JSONB NOT NULL,
     expected_decision   VARCHAR(16) NOT NULL,
@@ -228,8 +203,8 @@ CREATE TABLE IF NOT EXISTS test.abac_policy_test_cases (
     last_passed         BOOLEAN,
     last_run_at         TIMESTAMPTZ,
     created_by          BIGINT,
-    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    create_time         BIGINT NOT NULL,
+    update_time         BIGINT NOT NULL,
     CONSTRAINT uq_abac_policy_test_case
         UNIQUE (config_id, case_name),
     CONSTRAINT ck_abac_policy_test_decision
@@ -246,8 +221,8 @@ CREATE TABLE IF NOT EXISTS test.abac_audit_logs (
     request_id      VARCHAR(128),
     before_json     JSONB,
     after_json      JSONB,
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    create_time     BIGINT NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_abac_audit_object_created
-    ON test.abac_audit_logs (object_type, object_id, created_at DESC);
+    ON test.abac_audit_logs (object_type, object_id, create_time DESC);

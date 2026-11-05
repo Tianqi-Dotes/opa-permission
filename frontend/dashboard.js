@@ -145,6 +145,20 @@ const saveAttributeButton = document.querySelector("#save-attribute");
 const cancelAttributeButton = document.querySelector("#cancel-attribute");
 const attributeRows = document.querySelector("#attribute-rows");
 const attributeStatus = document.querySelector("#attribute-status");
+const resourceAttributesPanel = document.querySelector("#resource-attributes-panel");
+const resourceAttributeFilterResourceId = document.querySelector("#resource-attribute-filter-resource-id");
+const resourceAttributeFilterAttributeId = document.querySelector("#resource-attribute-filter-attribute-id");
+const filterResourceAttributesButton = document.querySelector("#filter-resource-attributes");
+const newResourceAttributeButton = document.querySelector("#new-resource-attribute");
+const resourceAttributeForm = document.querySelector("#resource-attribute-form");
+const resourceAttributeFormTitle = document.querySelector("#resource-attribute-form-title");
+const resourceAttributeResourceId = document.querySelector("#resource-attribute-resource-id");
+const resourceAttributeAttributeId = document.querySelector("#resource-attribute-attribute-id");
+const resourceAttributeValueText = document.querySelector("#resource-attribute-value-text");
+const saveResourceAttributeButton = document.querySelector("#save-resource-attribute");
+const cancelResourceAttributeButton = document.querySelector("#cancel-resource-attribute");
+const resourceAttributeRows = document.querySelector("#resource-attribute-rows");
+const resourceAttributeStatus = document.querySelector("#resource-attribute-status");
 const createBucketPanel = document.querySelector("#create-bucket-panel");
 const createBucketForm = document.querySelector("#create-bucket-form");
 const bucketNameInput = document.querySelector("#bucket-name");
@@ -167,6 +181,10 @@ let attributeListRequestId = 0;
 let attributeMutationInProgress = false;
 let editingAttributeId = null;
 let bucketCreationInProgress = false;
+let resourceAttributeDefinitions = [];
+let resourceAttributeListRequestId = 0;
+let resourceAttributeMutationInProgress = false;
+let editingResourceAttributeId = null;
 
 function getTokenSubject(encodedToken) {
     try {
@@ -199,20 +217,25 @@ function showPage(pageKey) {
     const isAssignRolesPage = pageKey === "assign-roles";
     const isPermissionTestPage = pageKey === "test-permissions";
     const isAttributeDictionaryPage = pageKey === "attribute-dictionary";
+    const isResourceAttributesPage = pageKey === "resource-attributes";
     const isCreateBucketPage = pageKey === "create-bucket";
     featureCard.hidden = isAssignRolesPage || isPermissionTestPage
-        || isAttributeDictionaryPage || isCreateBucketPage;
+        || isAttributeDictionaryPage || isResourceAttributesPage || isCreateBucketPage;
     infoRow.hidden = isAssignRolesPage || isPermissionTestPage
-        || isAttributeDictionaryPage || isCreateBucketPage;
+        || isAttributeDictionaryPage || isResourceAttributesPage || isCreateBucketPage;
     assignRolePanel.hidden = !isAssignRolesPage;
     permissionTestPanel.hidden = !isPermissionTestPage;
     attributeDictionaryPanel.hidden = !isAttributeDictionaryPage;
+    resourceAttributesPanel.hidden = !isResourceAttributesPage;
     createBucketPanel.hidden = !isCreateBucketPage;
     if (isAssignRolesPage) {
         loadUsers();
     }
     if (isAttributeDictionaryPage) {
         loadAttributeDefinitions();
+    }
+    if (isResourceAttributesPage) {
+        loadResourceAttributes();
     }
 
     navItems.forEach((item) => {
@@ -277,7 +300,7 @@ async function createBucket(event) {
 
         const resource = await response.json();
         createBucketStatus.textContent =
-            `Bucket "${bucketName}" was registered as ${resource.resourceCode}.`;
+            `Bucket "${bucketName}" was registered with resource ID ${resource.id} and code ${resource.resourceCode}.`;
         createBucketForm.reset();
     } catch (error) {
         createBucketStatus.textContent = error.message || "Unable to create the bucket resource.";
@@ -297,7 +320,7 @@ function renderAttributeDefinitions(definitions) {
         const emptyRow = document.createElement("tr");
         const emptyCell = document.createElement("td");
         emptyCell.className = "attribute-empty-state";
-        emptyCell.colSpan = 6;
+        emptyCell.colSpan = 7;
         emptyCell.textContent = "No attribute definitions found.";
         emptyRow.append(emptyCell);
         attributeRows.append(emptyRow);
@@ -311,7 +334,8 @@ function renderAttributeDefinitions(definitions) {
             formatAttributeLabel(definition.category),
             formatAttributeLabel(definition.dataType),
             definition.multiValued ? "Yes" : "No",
-            definition.description || "—"
+            definition.description || "—",
+            definition.isDefault ? "Platform default" : "Custom"
         ];
         values.forEach((value) => {
             const cell = document.createElement("td");
@@ -327,13 +351,20 @@ function renderAttributeDefinitions(definitions) {
         editButton.type = "button";
         editButton.textContent = "Edit";
         editButton.setAttribute("aria-label", `Edit ${definition.name}`);
-        editButton.addEventListener("click", () => openAttributeForm(definition));
         const deleteButton = document.createElement("button");
         deleteButton.className = "secondary-button";
         deleteButton.type = "button";
         deleteButton.textContent = "Delete";
         deleteButton.setAttribute("aria-label", `Delete ${definition.name}`);
-        deleteButton.addEventListener("click", () => deleteAttribute(definition, deleteButton));
+        if (definition.isDefault) {
+            editButton.disabled = true;
+            editButton.title = "Platform default attributes are read-only";
+            deleteButton.disabled = true;
+            deleteButton.title = "Platform default attributes cannot be deleted";
+        } else {
+            editButton.addEventListener("click", () => openAttributeForm(definition));
+            deleteButton.addEventListener("click", () => deleteAttribute(definition, deleteButton));
+        }
         actions.append(editButton, deleteButton);
         actionsCell.append(actions);
         row.append(actionsCell);
@@ -484,6 +515,280 @@ async function deleteAttribute(definition, button) {
         button.disabled = false;
     } finally {
         attributeMutationInProgress = false;
+    }
+}
+
+function populateResourceAttributeSelects() {
+    const filterSelection = resourceAttributeFilterAttributeId.value;
+    const formSelection = resourceAttributeAttributeId.value;
+
+    resourceAttributeFilterAttributeId.replaceChildren(new Option("All resource attributes", ""));
+    resourceAttributeAttributeId.replaceChildren(new Option("Select an attribute", ""));
+    resourceAttributeDefinitions.forEach((definition) => {
+        const label = `${definition.name} (${definition.dataType}${definition.multiValued ? ", multiple" : ""})`;
+        resourceAttributeFilterAttributeId.append(new Option(label, String(definition.id)));
+        resourceAttributeAttributeId.append(new Option(label, String(definition.id)));
+    });
+
+    if (resourceAttributeDefinitions.some((definition) => String(definition.id) === filterSelection)) {
+        resourceAttributeFilterAttributeId.value = filterSelection;
+    }
+    if (resourceAttributeDefinitions.some((definition) => String(definition.id) === formSelection)) {
+        resourceAttributeAttributeId.value = formSelection;
+    }
+    newResourceAttributeButton.disabled = resourceAttributeDefinitions.length === 0;
+}
+
+async function loadResourceAttributeDefinitions() {
+    newResourceAttributeButton.disabled = true;
+    const response = await fetch(`${apiBaseUrl}/api/abac/attributes?category=resource`, {
+        headers: {Authorization: `Bearer ${token}`}
+    });
+    if (!response.ok) {
+        throw new Error(await getApiError(response));
+    }
+
+    const definitions = await response.json();
+    if (!Array.isArray(definitions)) {
+        throw new Error("The resource attribute definition response was not a list.");
+    }
+    resourceAttributeDefinitions = definitions;
+    populateResourceAttributeSelects();
+}
+
+function renderResourceAttributeValues(values) {
+    resourceAttributeRows.replaceChildren();
+    if (values.length === 0) {
+        const emptyRow = document.createElement("tr");
+        const emptyCell = document.createElement("td");
+        emptyCell.className = "attribute-empty-state";
+        emptyCell.colSpan = 5;
+        emptyCell.textContent = "No resource attribute values found.";
+        emptyRow.append(emptyCell);
+        resourceAttributeRows.append(emptyRow);
+        return;
+    }
+
+    values.forEach((value) => {
+        const definition = resourceAttributeDefinitions.find(
+            (item) => String(item.id) === String(value.attributeId));
+        const row = document.createElement("tr");
+        [value.id, value.resourceId, definition ? definition.name : `Attribute #${value.attributeId}`,
+            value.valueText].forEach((cellValue) => {
+            const cell = document.createElement("td");
+            cell.textContent = cellValue == null ? "" : String(cellValue);
+            row.append(cell);
+        });
+
+        const actionsCell = document.createElement("td");
+        const actions = document.createElement("div");
+        actions.className = "attribute-table-actions";
+        const editButton = document.createElement("button");
+        editButton.className = "secondary-button";
+        editButton.type = "button";
+        editButton.textContent = "Edit";
+        editButton.setAttribute("aria-label", `Edit attribute value ${value.id}`);
+        editButton.addEventListener("click", () => openResourceAttributeForm(value));
+        const deleteButton = document.createElement("button");
+        deleteButton.className = "secondary-button";
+        deleteButton.type = "button";
+        deleteButton.textContent = "Delete";
+        deleteButton.setAttribute("aria-label", `Delete attribute value ${value.id}`);
+        deleteButton.addEventListener("click", () => deleteResourceAttribute(value, deleteButton));
+        actions.append(editButton, deleteButton);
+        actionsCell.append(actions);
+        row.append(actionsCell);
+        resourceAttributeRows.append(row);
+    });
+}
+
+async function loadResourceAttributeValues() {
+    const requestId = ++resourceAttributeListRequestId;
+    const resourceId = resourceAttributeFilterResourceId.value.trim();
+    if (resourceId && (!Number.isSafeInteger(Number(resourceId)) || Number(resourceId) <= 0)) {
+        resourceAttributeStatus.textContent = "Resource ID must be a positive integer.";
+        resourceAttributeFilterResourceId.focus();
+        return;
+    }
+
+    const query = new URLSearchParams();
+    if (resourceId) {
+        query.set("resourceId", resourceId);
+    }
+    if (resourceAttributeFilterAttributeId.value) {
+        query.set("attributeId", resourceAttributeFilterAttributeId.value);
+    }
+    const queryString = query.toString() ? `?${query.toString()}` : "";
+    filterResourceAttributesButton.disabled = true;
+    resourceAttributeStatus.textContent = "Loading resource attribute values...";
+
+    try {
+        const response = await fetch(`${apiBaseUrl}/api/abac/resource-attributes${queryString}`, {
+            headers: {Authorization: `Bearer ${token}`}
+        });
+        if (!response.ok) {
+            throw new Error(await getApiError(response));
+        }
+
+        const values = await response.json();
+        if (!Array.isArray(values)) {
+            throw new Error("The resource attribute value response was not a list.");
+        }
+        if (requestId !== resourceAttributeListRequestId) {
+            return;
+        }
+        renderResourceAttributeValues(values);
+        resourceAttributeStatus.textContent =
+            `Loaded ${values.length} resource attribute value${values.length === 1 ? "" : "s"}.`;
+    } catch (error) {
+        if (requestId === resourceAttributeListRequestId) {
+            resourceAttributeRows.replaceChildren();
+            const errorRow = document.createElement("tr");
+            const errorCell = document.createElement("td");
+            errorCell.className = "attribute-empty-state";
+            errorCell.colSpan = 5;
+            errorCell.textContent = error.message || "Unable to load resource attribute values.";
+            errorRow.append(errorCell);
+            resourceAttributeRows.append(errorRow);
+            resourceAttributeStatus.textContent =
+                error.message || "Unable to load resource attribute values.";
+        }
+    } finally {
+        if (requestId === resourceAttributeListRequestId) {
+            filterResourceAttributesButton.disabled = false;
+        }
+    }
+}
+
+async function loadResourceAttributes() {
+    resourceAttributeStatus.textContent = "Loading resource attributes...";
+    try {
+        await loadResourceAttributeDefinitions();
+        await loadResourceAttributeValues();
+    } catch (error) {
+        resourceAttributeDefinitions = [];
+        populateResourceAttributeSelects();
+        resourceAttributeRows.replaceChildren();
+        const errorRow = document.createElement("tr");
+        const errorCell = document.createElement("td");
+        errorCell.className = "attribute-empty-state";
+        errorCell.colSpan = 5;
+        errorCell.textContent = error.message || "Unable to load resource attributes.";
+        errorRow.append(errorCell);
+        resourceAttributeRows.append(errorRow);
+        resourceAttributeStatus.textContent = error.message || "Unable to load resource attributes.";
+    }
+}
+
+function openResourceAttributeForm(value = null) {
+    if (resourceAttributeMutationInProgress || resourceAttributeDefinitions.length === 0) {
+        return;
+    }
+    editingResourceAttributeId = value ? value.id : null;
+    resourceAttributeFormTitle.textContent = value
+        ? "Edit resource attribute value"
+        : "Add resource attribute value";
+    saveResourceAttributeButton.textContent = value ? "Save changes" : "Save value";
+    resourceAttributeResourceId.value = value
+        ? String(value.resourceId)
+        : resourceAttributeFilterResourceId.value;
+    resourceAttributeAttributeId.value = value
+        ? String(value.attributeId)
+        : resourceAttributeFilterAttributeId.value;
+    resourceAttributeValueText.value = value && value.valueText != null ? value.valueText : "";
+    resourceAttributeForm.hidden = false;
+    resourceAttributeResourceId.focus();
+}
+
+function resetResourceAttributeForm() {
+    editingResourceAttributeId = null;
+    resourceAttributeForm.reset();
+    resourceAttributeForm.hidden = true;
+    resourceAttributeFormTitle.textContent = "Add resource attribute value";
+    saveResourceAttributeButton.textContent = "Save value";
+}
+
+async function saveResourceAttribute(event) {
+    event.preventDefault();
+    if (resourceAttributeMutationInProgress || !resourceAttributeForm.reportValidity()) {
+        return;
+    }
+
+    const resourceId = Number(resourceAttributeResourceId.value);
+    const attributeId = Number(resourceAttributeAttributeId.value);
+    if (!Number.isSafeInteger(resourceId) || resourceId <= 0
+            || !Number.isSafeInteger(attributeId) || attributeId <= 0) {
+        resourceAttributeStatus.textContent = "Select a valid resource and attribute.";
+        return;
+    }
+
+    resourceAttributeMutationInProgress = true;
+    saveResourceAttributeButton.disabled = true;
+    cancelResourceAttributeButton.disabled = true;
+    const isEditing = editingResourceAttributeId !== null;
+    const value = {
+        resourceId,
+        attributeId,
+        valueText: resourceAttributeValueText.value
+    };
+    try {
+        const path = isEditing
+            ? `/api/abac/resource-attributes/${encodeURIComponent(String(editingResourceAttributeId))}`
+            : "/api/abac/resource-attributes";
+        const response = await fetch(`${apiBaseUrl}${path}`, {
+            method: isEditing ? "PUT" : "POST",
+            headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(value)
+        });
+        if (!response.ok) {
+            throw new Error(await getApiError(response));
+        }
+        resourceAttributeStatus.textContent = isEditing
+            ? "Resource attribute value updated."
+            : "Resource attribute value created.";
+        resetResourceAttributeForm();
+        await loadResourceAttributeValues();
+    } catch (error) {
+        resourceAttributeStatus.textContent =
+            error.message || "Unable to save the resource attribute value.";
+    } finally {
+        resourceAttributeMutationInProgress = false;
+        saveResourceAttributeButton.disabled = false;
+        cancelResourceAttributeButton.disabled = false;
+    }
+}
+
+async function deleteResourceAttribute(value, button) {
+    if (resourceAttributeMutationInProgress
+            || !window.confirm(`Delete resource attribute value ${value.id}?`)) {
+        return;
+    }
+
+    resourceAttributeMutationInProgress = true;
+    button.disabled = true;
+    resourceAttributeStatus.textContent = `Deleting resource attribute value ${value.id}...`;
+    try {
+        const response = await fetch(
+            `${apiBaseUrl}/api/abac/resource-attributes/${encodeURIComponent(String(value.id))}`,
+            {
+                method: "DELETE",
+                headers: {Authorization: `Bearer ${token}`}
+            }
+        );
+        if (!response.ok) {
+            throw new Error(await getApiError(response));
+        }
+        resourceAttributeStatus.textContent = `Resource attribute value ${value.id} deleted.`;
+        await loadResourceAttributeValues();
+    } catch (error) {
+        resourceAttributeStatus.textContent =
+            error.message || "Unable to delete the resource attribute value.";
+        button.disabled = false;
+    } finally {
+        resourceAttributeMutationInProgress = false;
     }
 }
 
@@ -702,6 +1007,10 @@ attributeCategoryFilter.addEventListener("change", loadAttributeDefinitions);
 attributeForm.addEventListener("submit", saveAttribute);
 cancelAttributeButton.addEventListener("click", resetAttributeForm);
 createBucketForm.addEventListener("submit", createBucket);
+filterResourceAttributesButton.addEventListener("click", loadResourceAttributeValues);
+newResourceAttributeButton.addEventListener("click", () => openResourceAttributeForm());
+resourceAttributeForm.addEventListener("submit", saveResourceAttribute);
+cancelResourceAttributeButton.addEventListener("click", resetResourceAttributeForm);
 
 navItems.forEach((item) => {
     item.addEventListener("click", () => showPage(item.dataset.page));

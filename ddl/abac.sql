@@ -29,20 +29,41 @@ CREATE TABLE IF NOT EXISTS test.attribute_definitions (
                                                      category            VARCHAR(32) NOT NULL,
                                                      data_type           VARCHAR(32) NOT NULL,
                                                      multi_valued        BOOLEAN NOT NULL DEFAULT FALSE,
+                                                     is_default          BOOLEAN NOT NULL DEFAULT FALSE,
                                                      description         TEXT,
                                                      create_time         BIGINT NOT NULL,
                                                      update_time         BIGINT NOT NULL,
                                                      CONSTRAINT ck_attribute_category
                                                          CHECK (category IN ('subject', 'resource', 'environment', 'action')),
                                                      CONSTRAINT ck_attribute_data_type
-                                                         CHECK (data_type IN ('string', 'number', 'boolean', 'date', 'datetime', 'json'))
+                                                         CHECK (data_type IN ('string', 'number', 'boolean', 'date', 'datetime', 'json')),
+                                                     CONSTRAINT uq_attribute_definitions_category_name
+                                                         UNIQUE (category, name)
 );
 
-ALTER TABLE test.attribute_definitions
-    DROP CONSTRAINT IF EXISTS attribute_definitions_name_key;
-
-CREATE UNIQUE INDEX IF NOT EXISTS uq_attribute_category_name
-    ON test.attribute_definitions (category, name);
+INSERT INTO test.attribute_definitions (
+    name,
+    category,
+    data_type,
+    multi_valued,
+    is_default,
+    description,
+    create_time,
+    update_time
+) VALUES
+    ('tenant_id', 'subject', 'number', FALSE, TRUE, 'Owning tenant identifier; managed by the platform.', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
+    ('clearance', 'subject', 'number', FALSE, TRUE, 'Subject clearance level used by ABAC policies.', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
+    ('groups', 'subject', 'string', TRUE, TRUE, 'Subject group memberships; sourced from the identity system.', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
+    ('roles', 'subject', 'string', TRUE, TRUE, 'Effective roles derived from RBAC assignments.', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
+    ('tenant_id', 'resource', 'number', FALSE, TRUE, 'Owning tenant identifier; managed by the platform.', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
+    ('classification', 'resource', 'number', FALSE, TRUE, 'Resource classification level used by ABAC policies.', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
+    ('allowed_groups', 'resource', 'string', TRUE, TRUE, 'Groups allowed to access the resource.', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT)
+ON CONFLICT (category, name) DO UPDATE SET
+    data_type = EXCLUDED.data_type,
+    multi_valued = EXCLUDED.multi_valued,
+    is_default = TRUE,
+    description = EXCLUDED.description,
+    update_time = EXCLUDED.update_time;
 
 -- Purpose: Stores concrete attribute values for subjects.
 -- subject_id:1,attribute_id:1,value:dpaas

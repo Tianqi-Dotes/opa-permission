@@ -1,8 +1,10 @@
 package com.opa.permission.model;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 @Data
@@ -14,6 +16,9 @@ public class AttributeDefinition {
     private String category;
     private String dataType;
     private Boolean multiValued;
+    @TableField("is_default")
+    @JsonProperty("isDefault")
+    private Boolean isDefault;
     private String description;
     private Long createTime;
     private Long updateTime;

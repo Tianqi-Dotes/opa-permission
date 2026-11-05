@@ -104,6 +104,9 @@ public class AttributeDefinitionController {
         if (existing == null) {
             return notFound();
         }
+        if (Boolean.TRUE.equals(existing.getIsDefault())) {
+            return conflict("Default attribute definitions cannot be modified");
+        }
 
         copyRequestFields(request, existing);
         existing.setUpdateTime(Instant.now().toEpochMilli());
@@ -123,6 +126,9 @@ public class AttributeDefinitionController {
         AttributeDefinition existing = attributeDefinitionService.getById(id);
         if (existing == null) {
             return notFound();
+        }
+        if (Boolean.TRUE.equals(existing.getIsDefault())) {
+            return conflict("Default attribute definitions cannot be deleted");
         }
 
         QueryWrapper<SubjectAttributeValue> subjectValues = new QueryWrapper<>();
@@ -163,6 +169,7 @@ public class AttributeDefinitionController {
     private static AttributeDefinition toEntity(AttributeDefinitionRequest request) {
         AttributeDefinition attribute = new AttributeDefinition();
         copyRequestFields(request, attribute);
+        attribute.setIsDefault(false);
         return attribute;
     }
 
@@ -183,8 +190,12 @@ public class AttributeDefinitionController {
     }
 
     private static ResponseEntity<ApiError> conflict() {
+        return conflict("An attribute with this category and name already exists");
+    }
+
+    private static ResponseEntity<ApiError> conflict(String message) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(new ApiError("An attribute with this category and name already exists"));
+                .body(new ApiError(message));
     }
 
     public record AttributeDefinitionRequest(String name,

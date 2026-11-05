@@ -57,7 +57,8 @@ WITH missing_role_permissions AS (
                 'Create Resource Attribute Value',
                 'Read Resource Attribute Value',
                 'Update Resource Attribute Value',
-                'Delete Resource Attribute Value'
+                'Delete Resource Attribute Value',
+                'Create ABAC Bucket Resource'
             ))
        OR (r.role_name = 'ANALYST' AND p.permission_name = 'Query Trino')
        OR (r.role_name = 'DEVELOPER'

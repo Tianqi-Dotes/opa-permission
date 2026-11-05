@@ -419,6 +419,7 @@ button {
 
 .permission-test-panel[hidden],
 .assign-role-panel[hidden],
+.create-bucket-panel[hidden],
 .attribute-dictionary-panel[hidden],
 .attribute-form[hidden],
 .feature-card[hidden],
@@ -426,7 +427,8 @@ button {
     display: none;
 }
 
-.assign-role-panel {
+.assign-role-panel,
+.create-bucket-panel {
     margin-top: 18px;
     padding: 23px;
     border: 1px solid #e9edf4;
@@ -459,6 +461,14 @@ button {
 #assign-role-form {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 13px;
+    margin-top: 22px;
+}
+
+#create-bucket-form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: end;
     gap: 13px;
     margin-top: 22px;
@@ -915,7 +925,8 @@ button {
         padding: 10px 8px;
     }
 
-    .assign-role-panel {
+    .assign-role-panel,
+    .create-bucket-panel {
         padding: 18px;
     }
 
@@ -925,6 +936,11 @@ button {
     }
 
     #assign-role-form {
+        grid-template-columns: 1fr;
+        align-items: stretch;
+    }
+
+    #create-bucket-form {
         grid-template-columns: 1fr;
         align-items: stretch;
     }

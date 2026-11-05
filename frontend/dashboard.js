@@ -86,6 +86,14 @@ const pages = {
         featureTitle: "Table management",
         featureDescription: "Table management tools will be available here.",
         symbol: "CT"
+    },
+    "create-bucket": {
+        section: "Workspace",
+        title: "Create Bucket",
+        description: "Register a bucket as an ABAC-protected resource.",
+        featureTitle: "Create bucket",
+        featureDescription: "Register a bucket resource for the current tenant.",
+        symbol: "CB"
     }
 };
 
@@ -137,6 +145,11 @@ const saveAttributeButton = document.querySelector("#save-attribute");
 const cancelAttributeButton = document.querySelector("#cancel-attribute");
 const attributeRows = document.querySelector("#attribute-rows");
 const attributeStatus = document.querySelector("#attribute-status");
+const createBucketPanel = document.querySelector("#create-bucket-panel");
+const createBucketForm = document.querySelector("#create-bucket-form");
+const bucketNameInput = document.querySelector("#bucket-name");
+const createBucketSubmit = document.querySelector("#create-bucket-submit");
+const createBucketStatus = document.querySelector("#create-bucket-status");
 
 const apiBaseUrl = (window.API_BASE_URL || "http://localhost:1111").replace(/\/+$/, "");
 const trinoPermissionTests = [
@@ -153,6 +166,7 @@ let userListLoaded = false;
 let attributeListRequestId = 0;
 let attributeMutationInProgress = false;
 let editingAttributeId = null;
+let bucketCreationInProgress = false;
 
 function getTokenSubject(encodedToken) {
     try {
@@ -185,11 +199,15 @@ function showPage(pageKey) {
     const isAssignRolesPage = pageKey === "assign-roles";
     const isPermissionTestPage = pageKey === "test-permissions";
     const isAttributeDictionaryPage = pageKey === "attribute-dictionary";
-    featureCard.hidden = isAssignRolesPage || isPermissionTestPage || isAttributeDictionaryPage;
-    infoRow.hidden = isAssignRolesPage || isPermissionTestPage || isAttributeDictionaryPage;
+    const isCreateBucketPage = pageKey === "create-bucket";
+    featureCard.hidden = isAssignRolesPage || isPermissionTestPage
+        || isAttributeDictionaryPage || isCreateBucketPage;
+    infoRow.hidden = isAssignRolesPage || isPermissionTestPage
+        || isAttributeDictionaryPage || isCreateBucketPage;
     assignRolePanel.hidden = !isAssignRolesPage;
     permissionTestPanel.hidden = !isPermissionTestPage;
     attributeDictionaryPanel.hidden = !isAttributeDictionaryPage;
+    createBucketPanel.hidden = !isCreateBucketPage;
     if (isAssignRolesPage) {
         loadUsers();
     }
@@ -225,6 +243,47 @@ async function getApiError(response) {
         return body.message || `Request failed with HTTP ${response.status}.`;
     } catch {
         return `Request failed with HTTP ${response.status}.`;
+    }
+}
+
+async function createBucket(event) {
+    event.preventDefault();
+    if (bucketCreationInProgress || !createBucketForm.reportValidity()) {
+        return;
+    }
+
+    const bucketName = bucketNameInput.value.trim();
+    if (!bucketName) {
+        createBucketStatus.textContent = "Bucket name is required.";
+        bucketNameInput.focus();
+        return;
+    }
+
+    bucketCreationInProgress = true;
+    createBucketSubmit.disabled = true;
+    createBucketStatus.textContent = "Creating bucket resource...";
+    try {
+        const response = await fetch(`${apiBaseUrl}/api/abac/resources/buckets`, {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({bucketName})
+        });
+        if (!response.ok) {
+            throw new Error(await getApiError(response));
+        }
+
+        const resource = await response.json();
+        createBucketStatus.textContent =
+            `Bucket "${bucketName}" was registered as ${resource.resourceCode}.`;
+        createBucketForm.reset();
+    } catch (error) {
+        createBucketStatus.textContent = error.message || "Unable to create the bucket resource.";
+    } finally {
+        bucketCreationInProgress = false;
+        createBucketSubmit.disabled = false;
     }
 }
 
@@ -642,6 +701,7 @@ refreshAttributesButton.addEventListener("click", loadAttributeDefinitions);
 attributeCategoryFilter.addEventListener("change", loadAttributeDefinitions);
 attributeForm.addEventListener("submit", saveAttribute);
 cancelAttributeButton.addEventListener("click", resetAttributeForm);
+createBucketForm.addEventListener("submit", createBucket);
 
 navItems.forEach((item) => {
     item.addEventListener("click", () => showPage(item.dataset.page));

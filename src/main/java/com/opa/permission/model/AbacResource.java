@@ -10,10 +10,10 @@ import lombok.Data;
 public class AbacResource {
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
-    private String resourceCode;
+    private String resourceCode;//trino:prod.sales.orders
     private String resourceType;
     private String resourceName;
-    private String owner;
+    private String owner;//tenant
     private String status;
     private Long createTime;
     private Long updateTime;

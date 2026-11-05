@@ -76,6 +76,10 @@
                         <span class="nav-icon" aria-hidden="true">CT</span>
                         <span>Create Trino Table</span>
                     </button>
+                    <button class="nav-item" type="button" data-page="create-bucket">
+                        <span class="nav-icon" aria-hidden="true">CB</span>
+                        <span>Create Bucket</span>
+                    </button>
                 </div>
             </section>
         </nav>
@@ -252,6 +256,29 @@
                 </div>
                 <p class="attribute-status" id="attribute-status" role="status" aria-live="polite">
                     Attribute definitions have not been loaded.
+                </p>
+            </section>
+
+            <section class="create-bucket-panel" id="create-bucket-panel" hidden
+                     aria-labelledby="create-bucket-title">
+                <div class="assign-role-header">
+                    <div>
+                        <h2 id="create-bucket-title">Register a bucket resource</h2>
+                        <p>The resource will be associated with the tenant in your current session.</p>
+                    </div>
+                </div>
+                <form id="create-bucket-form">
+                    <label class="form-field" for="bucket-name">
+                        <span>Bucket name</span>
+                        <input id="bucket-name" name="bucketName" type="text" maxlength="256"
+                               autocomplete="off" required>
+                    </label>
+                    <button class="primary-button" id="create-bucket-submit" type="submit">
+                        Create bucket
+                    </button>
+                </form>
+                <p class="assign-role-status" id="create-bucket-status" role="status" aria-live="polite">
+                    Enter a bucket name to register it as an ABAC resource.
                 </p>
             </section>
 

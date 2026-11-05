@@ -42,7 +42,7 @@ const pages = {
     "subject-attributes": {
         section: "ABAC",
         title: "Subject Attributes",
-        description: "Manage attributes associated with users and other subjects.",
+        description: "Manage subject attributes for users in your tenant.",
         featureTitle: "Subject attributes",
         featureDescription: "View and manage the attributes that ABAC policies evaluate for a subject.",
         symbol: "SA"
@@ -180,6 +180,23 @@ const attributeTemplateViews = {
         closeDetailButton: document.querySelector("#close-tenant-template-detail")
     }
 };
+const subjectAttributesPanel = document.querySelector("#subject-attributes-panel");
+const refreshSubjectsButton = document.querySelector("#refresh-subjects");
+const subjectRows = document.querySelector("#subject-rows");
+const subjectListStatus = document.querySelector("#subject-list-status");
+const selectedSubjectLabel = document.querySelector("#selected-subject-label");
+const subjectAttributeFilterAttributeId = document.querySelector("#subject-attribute-filter-attribute-id");
+const filterSubjectAttributesButton = document.querySelector("#filter-subject-attributes");
+const newSubjectAttributeButton = document.querySelector("#new-subject-attribute");
+const subjectAttributeForm = document.querySelector("#subject-attribute-form");
+const subjectAttributeFormTitle = document.querySelector("#subject-attribute-form-title");
+const subjectAttributeSubjectId = document.querySelector("#subject-attribute-subject-id");
+const subjectAttributeAttributeId = document.querySelector("#subject-attribute-attribute-id");
+const subjectAttributeValueText = document.querySelector("#subject-attribute-value-text");
+const saveSubjectAttributeButton = document.querySelector("#save-subject-attribute");
+const cancelSubjectAttributeButton = document.querySelector("#cancel-subject-attribute");
+const subjectAttributeRows = document.querySelector("#subject-attribute-rows");
+const subjectAttributeStatus = document.querySelector("#subject-attribute-status");
 const resourceAttributesPanel = document.querySelector("#resource-attributes-panel");
 const internalResourceTab = document.querySelector("#internal-resource-tab");
 const externalResourceTab = document.querySelector("#external-resource-tab");
@@ -229,6 +246,13 @@ let editingAttributeId = null;
 let activeAttributeTemplateScope = "default";
 const attributeTemplateListRequestIds = {default: 0, tenant: 0};
 const attributeTemplateDetailRequestIds = {default: 0, tenant: 0};
+let subjectAttributeDefinitions = [];
+let subjectsInTenant = [];
+let selectedSubject = null;
+let subjectListRequestId = 0;
+let subjectAttributeListRequestId = 0;
+let subjectAttributeMutationInProgress = false;
+let editingSubjectAttributeId = null;
 let bucketCreationInProgress = false;
 let resourceAttributeDefinitions = [];
 let resourceAttributeListRequestId = 0;
@@ -304,18 +328,20 @@ function showPage(pageKey) {
     const isPermissionTestPage = pageKey === "test-permissions";
     const isAttributeDictionaryPage = pageKey === "attribute-dictionary";
     const isAttributeTemplatesPage = pageKey === "attribute-templates";
+    const isSubjectAttributesPage = pageKey === "subject-attributes";
     const isResourceAttributesPage = pageKey === "resource-attributes";
     const isCreateBucketPage = pageKey === "create-bucket";
     featureCard.hidden = isAssignRolesPage || isPermissionTestPage
-        || isAttributeDictionaryPage || isAttributeTemplatesPage
+        || isAttributeDictionaryPage || isAttributeTemplatesPage || isSubjectAttributesPage
         || isResourceAttributesPage || isCreateBucketPage;
     infoRow.hidden = isAssignRolesPage || isPermissionTestPage
-        || isAttributeDictionaryPage || isAttributeTemplatesPage
+        || isAttributeDictionaryPage || isAttributeTemplatesPage || isSubjectAttributesPage
         || isResourceAttributesPage || isCreateBucketPage;
     assignRolePanel.hidden = !isAssignRolesPage;
     permissionTestPanel.hidden = !isPermissionTestPage;
     attributeDictionaryPanel.hidden = !isAttributeDictionaryPage;
     attributeTemplatePanel.hidden = !isAttributeTemplatesPage;
+    subjectAttributesPanel.hidden = !isSubjectAttributesPage;
     resourceAttributesPanel.hidden = !isResourceAttributesPage;
     createBucketPanel.hidden = !isCreateBucketPage;
     if (isAssignRolesPage) {
@@ -326,6 +352,9 @@ function showPage(pageKey) {
     }
     if (isAttributeTemplatesPage) {
         loadAttributeTemplateList(activeAttributeTemplateScope);
+    }
+    if (isSubjectAttributesPage) {
+        loadSubjectAttributes();
     }
     if (isResourceAttributesPage) {
         loadResourceAttributes();
@@ -432,7 +461,7 @@ function setAttributeTemplateRowsMessage(scope, message) {
     const row = document.createElement("tr");
     const cell = document.createElement("td");
     cell.className = "attribute-empty-state";
-    cell.colSpan = 7;
+    cell.colSpan = 8;
     cell.textContent = message;
     row.append(cell);
     view.rows.append(row);
@@ -450,6 +479,7 @@ function renderAttributeTemplateList(scope, templates) {
         const row = document.createElement("tr");
         [
             template.id,
+            template.permissionName || "—",
             formatPermissionPath(template),
             formatAttributeLabel(template.targetType),
             template.attributeId,
@@ -544,6 +574,7 @@ function renderAttributeTemplateDetail(scope, template) {
     fields.replaceChildren();
     appendAttributeTemplateDetailField(fields, "ID", template.id);
     appendAttributeTemplateDetailField(fields, "Permission ID", template.permissionId);
+    appendAttributeTemplateDetailField(fields, "Permission name", template.permissionName);
     appendAttributeTemplateDetailField(fields, "Permission path", template.permissionPath);
     appendAttributeTemplateDetailField(fields, "HTTP method", template.httpMethod);
     appendAttributeTemplateDetailField(fields, "Source", formatAttributeLabel(template.fromType));
@@ -802,6 +833,399 @@ async function deleteAttribute(definition, button) {
         button.disabled = false;
     } finally {
         attributeMutationInProgress = false;
+    }
+}
+
+function populateSubjectAttributeSelects() {
+    const filterSelection = subjectAttributeFilterAttributeId.value;
+    const formSelection = subjectAttributeAttributeId.value;
+    subjectAttributeFilterAttributeId.replaceChildren(new Option("All subject attributes", ""));
+    subjectAttributeAttributeId.replaceChildren(new Option("Select an attribute", ""));
+    subjectAttributeDefinitions.forEach((definition) => {
+        const label = `${definition.name} (${definition.dataType}${definition.multiValued ? ", multiple" : ""})`;
+        subjectAttributeFilterAttributeId.append(new Option(label, String(definition.id)));
+        subjectAttributeAttributeId.append(new Option(label, String(definition.id)));
+    });
+    if (subjectAttributeDefinitions.some((definition) => String(definition.id) === filterSelection)) {
+        subjectAttributeFilterAttributeId.value = filterSelection;
+    }
+    if (subjectAttributeDefinitions.some((definition) => String(definition.id) === formSelection)) {
+        subjectAttributeAttributeId.value = formSelection;
+    }
+    filterSubjectAttributesButton.disabled = !selectedSubject;
+    newSubjectAttributeButton.disabled = !selectedSubject || subjectAttributeDefinitions.length === 0;
+}
+
+async function loadSubjectAttributeDefinitions() {
+    const response = await fetch(`${apiBaseUrl}/api/abac/attributes?category=subject`, {
+        headers: {Authorization: `Bearer ${token}`}
+    });
+    if (!response.ok) {
+        throw new Error(await getApiError(response));
+    }
+    const definitions = await response.json();
+    if (!Array.isArray(definitions)) {
+        throw new Error("The subject attribute definition response was not a list.");
+    }
+    subjectAttributeDefinitions = definitions;
+    populateSubjectAttributeSelects();
+}
+
+function setSubjectRowsMessage(message) {
+    subjectRows.replaceChildren();
+    const row = document.createElement("tr");
+    const cell = document.createElement("td");
+    cell.className = "attribute-empty-state";
+    cell.colSpan = 5;
+    cell.textContent = message;
+    row.append(cell);
+    subjectRows.append(row);
+}
+
+function renderSubjects(subjects) {
+    subjectRows.replaceChildren();
+    if (subjects.length === 0) {
+        setSubjectRowsMessage("No users found in your tenant.");
+        return;
+    }
+
+    subjects.forEach((subject) => {
+        const row = document.createElement("tr");
+        [subject.userId, subject.username, subject.groupName || "—", subject.status || "—"]
+            .forEach((value) => {
+                const cell = document.createElement("td");
+                cell.textContent = value == null ? "" : String(value);
+                row.append(cell);
+            });
+        const actionsCell = document.createElement("td");
+        const selectButton = document.createElement("button");
+        selectButton.className = "secondary-button";
+        selectButton.type = "button";
+        const isSelected = selectedSubject
+            && String(selectedSubject.userId) === String(subject.userId);
+        selectButton.textContent = isSelected ? "Selected" : "Select";
+        selectButton.setAttribute("aria-label", `Select subject ${subject.username || subject.userId}`);
+        selectButton.addEventListener("click", () => selectSubject(subject));
+        actionsCell.append(selectButton);
+        row.append(actionsCell);
+        subjectRows.append(row);
+    });
+}
+
+function selectSubject(subject) {
+    const changed = !selectedSubject || String(selectedSubject.userId) !== String(subject.userId);
+    selectedSubject = subject;
+    subjectAttributeSubjectId.value = String(subject.userId);
+    selectedSubjectLabel.textContent =
+        `Selected ${subject.username || "user"} (ID ${subject.userId}).`;
+    populateSubjectAttributeSelects();
+    renderSubjects(subjectsInTenant);
+    if (changed) {
+        resetSubjectAttributeForm();
+    }
+    loadSubjectAttributeValues();
+}
+
+async function loadSubjectList() {
+    const requestId = ++subjectListRequestId;
+    refreshSubjectsButton.disabled = true;
+    subjectListStatus.textContent = "Loading users in your tenant...";
+    try {
+        const response = await fetch(`${apiBaseUrl}/api/permissions/users`, {
+            headers: {Authorization: `Bearer ${token}`}
+        });
+        if (!response.ok) {
+            throw new Error(await getApiError(response));
+        }
+        const subjects = await response.json();
+        if (!Array.isArray(subjects)) {
+            throw new Error("The subject list response was not a list.");
+        }
+        if (requestId !== subjectListRequestId) {
+            return;
+        }
+
+        subjectsInTenant = subjects;
+        if (selectedSubject) {
+            selectedSubject = subjects.find(
+                (subject) => String(subject.userId) === String(selectedSubject.userId)) || null;
+        }
+        renderSubjects(subjects);
+        subjectListStatus.textContent =
+            `Loaded ${subjects.length} user${subjects.length === 1 ? "" : "s"} in your tenant.`;
+        if (selectedSubject) {
+            subjectAttributeSubjectId.value = String(selectedSubject.userId);
+            selectedSubjectLabel.textContent =
+                `Selected ${selectedSubject.username || "user"} (ID ${selectedSubject.userId}).`;
+            populateSubjectAttributeSelects();
+            await loadSubjectAttributeValues();
+        } else {
+            subjectAttributeSubjectId.value = "";
+            selectedSubjectLabel.textContent = "Select a user to view or manage their attribute values.";
+            resetSubjectAttributeForm();
+            setSubjectAttributeRowsMessage("Select a user to load subject attribute values.");
+            subjectAttributeStatus.textContent = "Select a user to load subject attribute values.";
+            populateSubjectAttributeSelects();
+        }
+    } catch (error) {
+        if (requestId === subjectListRequestId) {
+            subjectsInTenant = [];
+            selectedSubject = null;
+            subjectAttributeSubjectId.value = "";
+            resetSubjectAttributeForm();
+            setSubjectRowsMessage(error.message || "Unable to load users.");
+            subjectListStatus.textContent = error.message || "Unable to load users.";
+            selectedSubjectLabel.textContent = "Select a user to view or manage their attribute values.";
+            setSubjectAttributeRowsMessage("Unable to load subjects.");
+            subjectAttributeStatus.textContent = error.message || "Unable to load users.";
+            populateSubjectAttributeSelects();
+        }
+    } finally {
+        if (requestId === subjectListRequestId) {
+            refreshSubjectsButton.disabled = false;
+        }
+    }
+}
+
+function setSubjectAttributeRowsMessage(message) {
+    subjectAttributeRows.replaceChildren();
+    const row = document.createElement("tr");
+    const cell = document.createElement("td");
+    cell.className = "attribute-empty-state";
+    cell.colSpan = 4;
+    cell.textContent = message;
+    row.append(cell);
+    subjectAttributeRows.append(row);
+}
+
+function formatSubjectAttributeValue(value) {
+    if (value.valueText != null) {
+        return value.valueText;
+    }
+    if (value.valueJson != null) {
+        try {
+            return JSON.stringify(value.valueJson);
+        } catch {
+            return String(value.valueJson);
+        }
+    }
+    return "—";
+}
+
+function renderSubjectAttributeValues(values) {
+    subjectAttributeRows.replaceChildren();
+    if (values.length === 0) {
+        setSubjectAttributeRowsMessage("No subject attribute values found.");
+        return;
+    }
+    values.forEach((value) => {
+        const definition = subjectAttributeDefinitions.find(
+            (item) => String(item.id) === String(value.attributeId));
+        const row = document.createElement("tr");
+        [value.id, definition ? definition.name : `Attribute #${value.attributeId}`,
+            formatSubjectAttributeValue(value)].forEach((cellValue) => {
+            const cell = document.createElement("td");
+            cell.textContent = cellValue == null ? "" : String(cellValue);
+            row.append(cell);
+        });
+
+        const actionsCell = document.createElement("td");
+        const actions = document.createElement("div");
+        actions.className = "attribute-table-actions";
+        const editButton = document.createElement("button");
+        editButton.className = "secondary-button";
+        editButton.type = "button";
+        editButton.textContent = "Edit";
+        editButton.setAttribute("aria-label", `Edit subject attribute value ${value.id}`);
+        editButton.addEventListener("click", () => openSubjectAttributeForm(value));
+        const deleteButton = document.createElement("button");
+        deleteButton.className = "secondary-button";
+        deleteButton.type = "button";
+        deleteButton.textContent = "Delete";
+        deleteButton.setAttribute("aria-label", `Delete subject attribute value ${value.id}`);
+        deleteButton.addEventListener("click", () => deleteSubjectAttribute(value, deleteButton));
+        actions.append(editButton, deleteButton);
+        actionsCell.append(actions);
+        row.append(actionsCell);
+        subjectAttributeRows.append(row);
+    });
+}
+
+async function loadSubjectAttributeValues() {
+    const requestId = ++subjectAttributeListRequestId;
+    if (!selectedSubject) {
+        setSubjectAttributeRowsMessage("Select a user to load subject attribute values.");
+        subjectAttributeStatus.textContent = "Select a user to load subject attribute values.";
+        return;
+    }
+    const query = new URLSearchParams({subjectId: String(selectedSubject.userId)});
+    if (subjectAttributeFilterAttributeId.value) {
+        query.set("attributeId", subjectAttributeFilterAttributeId.value);
+    }
+    filterSubjectAttributesButton.disabled = true;
+    subjectAttributeStatus.textContent = "Loading subject attribute values...";
+    try {
+        const response = await fetch(
+            `${apiBaseUrl}/api/abac/subject-attributes?${query.toString()}`,
+            {headers: {Authorization: `Bearer ${token}`}}
+        );
+        if (!response.ok) {
+            throw new Error(await getApiError(response));
+        }
+        const values = await response.json();
+        if (!Array.isArray(values)) {
+            throw new Error("The subject attribute value response was not a list.");
+        }
+        if (requestId !== subjectAttributeListRequestId) {
+            return;
+        }
+        renderSubjectAttributeValues(values);
+        subjectAttributeStatus.textContent =
+            `Loaded ${values.length} subject attribute value${values.length === 1 ? "" : "s"}.`;
+    } catch (error) {
+        if (requestId === subjectAttributeListRequestId) {
+            setSubjectAttributeRowsMessage(error.message || "Unable to load subject attribute values.");
+            subjectAttributeStatus.textContent =
+                error.message || "Unable to load subject attribute values.";
+        }
+    } finally {
+        if (requestId === subjectAttributeListRequestId) {
+            filterSubjectAttributesButton.disabled = !selectedSubject;
+        }
+    }
+}
+
+async function loadSubjectAttributes() {
+    subjectAttributeStatus.textContent = "Loading subject attributes...";
+    let definitionsError = null;
+    try {
+        await loadSubjectAttributeDefinitions();
+    } catch (error) {
+        definitionsError = error;
+        subjectAttributeDefinitions = [];
+        populateSubjectAttributeSelects();
+    }
+    await loadSubjectList();
+    if (definitionsError) {
+        subjectAttributeStatus.textContent =
+            definitionsError.message || "Unable to load subject attributes.";
+    }
+}
+
+function openSubjectAttributeForm(value = null) {
+    if (subjectAttributeMutationInProgress || !selectedSubject
+            || subjectAttributeDefinitions.length === 0) {
+        return;
+    }
+    editingSubjectAttributeId = value ? value.id : null;
+    subjectAttributeFormTitle.textContent = value
+        ? "Edit subject attribute value"
+        : "Add subject attribute value";
+    saveSubjectAttributeButton.textContent = value ? "Save changes" : "Save value";
+    subjectAttributeSubjectId.value = String(selectedSubject.userId);
+    subjectAttributeAttributeId.value = value ? String(value.attributeId) : "";
+    subjectAttributeValueText.value = value
+        ? value.valueText != null
+            ? value.valueText
+            : value.valueJson != null
+                ? JSON.stringify(value.valueJson, null, 2)
+                : ""
+        : "";
+    subjectAttributeForm.hidden = false;
+    subjectAttributeAttributeId.focus();
+}
+
+function resetSubjectAttributeForm() {
+    editingSubjectAttributeId = null;
+    subjectAttributeForm.reset();
+    subjectAttributeForm.hidden = true;
+    subjectAttributeFormTitle.textContent = "Add subject attribute value";
+    saveSubjectAttributeButton.textContent = "Save value";
+    subjectAttributeSubjectId.value = selectedSubject ? String(selectedSubject.userId) : "";
+}
+
+async function saveSubjectAttribute(event) {
+    event.preventDefault();
+    if (subjectAttributeMutationInProgress || !subjectAttributeForm.reportValidity()) {
+        return;
+    }
+    if (!selectedSubject) {
+        subjectAttributeStatus.textContent = "Select a user before adding an attribute value.";
+        return;
+    }
+
+    const attributeId = Number(subjectAttributeAttributeId.value);
+    if (!Number.isSafeInteger(attributeId) || attributeId <= 0) {
+        subjectAttributeStatus.textContent = "Select a valid subject attribute.";
+        return;
+    }
+
+    subjectAttributeMutationInProgress = true;
+    saveSubjectAttributeButton.disabled = true;
+    cancelSubjectAttributeButton.disabled = true;
+    const isEditing = editingSubjectAttributeId !== null;
+    const value = {
+        subjectId: selectedSubject.userId,
+        attributeId,
+        valueText: subjectAttributeValueText.value
+    };
+    try {
+        const path = isEditing
+            ? `/api/abac/subject-attributes/${encodeURIComponent(String(editingSubjectAttributeId))}`
+            : "/api/abac/subject-attributes";
+        const response = await fetch(`${apiBaseUrl}${path}`, {
+            method: isEditing ? "PUT" : "POST",
+            headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(value)
+        });
+        if (!response.ok) {
+            throw new Error(await getApiError(response));
+        }
+        subjectAttributeStatus.textContent = isEditing
+            ? "Subject attribute value updated."
+            : "Subject attribute value created.";
+        resetSubjectAttributeForm();
+        await loadSubjectAttributeValues();
+    } catch (error) {
+        subjectAttributeStatus.textContent =
+            error.message || "Unable to save the subject attribute value.";
+    } finally {
+        subjectAttributeMutationInProgress = false;
+        saveSubjectAttributeButton.disabled = false;
+        cancelSubjectAttributeButton.disabled = false;
+    }
+}
+
+async function deleteSubjectAttribute(value, button) {
+    if (subjectAttributeMutationInProgress
+            || !window.confirm(`Delete subject attribute value ${value.id}?`)) {
+        return;
+    }
+    subjectAttributeMutationInProgress = true;
+    button.disabled = true;
+    subjectAttributeStatus.textContent = `Deleting subject attribute value ${value.id}...`;
+    try {
+        const response = await fetch(
+            `${apiBaseUrl}/api/abac/subject-attributes/${encodeURIComponent(String(value.id))}`,
+            {
+                method: "DELETE",
+                headers: {Authorization: `Bearer ${token}`}
+            }
+        );
+        if (!response.ok) {
+            throw new Error(await getApiError(response));
+        }
+        subjectAttributeStatus.textContent = `Subject attribute value ${value.id} deleted.`;
+        await loadSubjectAttributeValues();
+    } catch (error) {
+        subjectAttributeStatus.textContent =
+            error.message || "Unable to delete the subject attribute value.";
+        button.disabled = false;
+    } finally {
+        subjectAttributeMutationInProgress = false;
     }
 }
 
@@ -1392,6 +1816,11 @@ refreshAttributesButton.addEventListener("click", loadAttributeDefinitions);
 attributeCategoryFilter.addEventListener("change", loadAttributeDefinitions);
 attributeForm.addEventListener("submit", saveAttribute);
 cancelAttributeButton.addEventListener("click", resetAttributeForm);
+refreshSubjectsButton.addEventListener("click", loadSubjectList);
+filterSubjectAttributesButton.addEventListener("click", loadSubjectAttributeValues);
+newSubjectAttributeButton.addEventListener("click", () => openSubjectAttributeForm());
+subjectAttributeForm.addEventListener("submit", saveSubjectAttribute);
+cancelSubjectAttributeButton.addEventListener("click", resetSubjectAttributeForm);
 defaultTemplateTab.addEventListener("click", () => activateAttributeTemplateTab(defaultTemplateTab));
 tenantTemplateTab.addEventListener("click", () => activateAttributeTemplateTab(tenantTemplateTab));
 attributeTemplateViews.default.refreshButton.addEventListener(

@@ -91,6 +91,7 @@ public class PermissionDefaultAttributeWriteController {
         return new PermissionDefaultAttributeWriteResponse(
                 write.getId(),
                 write.getPermissionId(),
+                permission == null ? null : permission.getPermissionName(),
                 permission == null ? null : permission.getResourcePattern(),
                 permission == null ? null : permission.getHttpMethod(),
                 write.getFromType(),
@@ -117,6 +118,7 @@ public class PermissionDefaultAttributeWriteController {
     public record PermissionDefaultAttributeWriteResponse(
             Long id,
             Long permissionId,
+            String permissionName,
             String permissionPath,
             String httpMethod,
             String fromType,

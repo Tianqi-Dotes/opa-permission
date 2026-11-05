@@ -1,7 +1,9 @@
 package com.opa.permission.controller;
 
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.opa.permission.model.Role;
+import com.opa.permission.model.SubjectIdProvider;
 import com.opa.permission.model.UserAccount;
 import com.opa.permission.model.UserRole;
 import com.opa.permission.service.RoleService;
@@ -126,7 +128,13 @@ public class PermissionController {
     public record UserSummary(Long userId, String username, Long tenantId, String groupName, String status) {
     }
 
-    public record RoleAssignmentResponse(Long id, Long userId, Long roleId, Long tenantId, Long grantBy) {
+    public record RoleAssignmentResponse(Long id, Long userId, Long roleId, Long tenantId, Long grantBy)
+            implements SubjectIdProvider {
+        @Override
+        @JsonIgnore
+        public Long subjectId() {
+            return userId;
+        }
     }
 
     public record ApiError(String message) {

@@ -294,6 +294,7 @@
                             <thead>
                             <tr>
                                 <th scope="col">ID</th>
+                                <th scope="col">Permission name</th>
                                 <th scope="col">Permission path</th>
                                 <th scope="col">Target</th>
                                 <th scope="col">Attribute ID</th>
@@ -303,7 +304,7 @@
                             </tr>
                             </thead>
                             <tbody id="default-template-rows">
-                            <tr><td class="attribute-empty-state" colspan="7">Load default templates to get started.</td></tr>
+                            <tr><td class="attribute-empty-state" colspan="8">Load default templates to get started.</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -335,6 +336,7 @@
                             <thead>
                             <tr>
                                 <th scope="col">ID</th>
+                                <th scope="col">Permission name</th>
                                 <th scope="col">Permission path</th>
                                 <th scope="col">Target</th>
                                 <th scope="col">Attribute ID</th>
@@ -344,7 +346,7 @@
                             </tr>
                             </thead>
                             <tbody id="tenant-template-rows">
-                            <tr><td class="attribute-empty-state" colspan="7">Load tenant templates to get started.</td></tr>
+                            <tr><td class="attribute-empty-state" colspan="8">Load tenant templates to get started.</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -364,6 +366,99 @@
                         <dl class="attribute-template-detail-grid" id="tenant-template-detail-fields"></dl>
                     </section>
                 </div>
+            </section>
+
+            <section class="attribute-dictionary-panel" id="subject-attributes-panel" hidden
+                     aria-labelledby="subject-attributes-title">
+                <div class="attribute-dictionary-header">
+                    <div>
+                        <h2 id="subject-attributes-title">Subject Attributes</h2>
+                        <p>Select a user in your tenant to view and manage their subject attribute values.</p>
+                    </div>
+                    <div class="attribute-toolbar">
+                        <button class="secondary-button" id="refresh-subjects" type="button">Refresh users</button>
+                    </div>
+                </div>
+                <div class="attribute-table-wrap">
+                    <table class="attribute-table">
+                        <thead>
+                        <tr>
+                            <th scope="col">User ID</th>
+                            <th scope="col">Username</th>
+                            <th scope="col">Group</th>
+                            <th scope="col">Status</th>
+                            <th scope="col"><span class="visually-hidden">Actions</span></th>
+                        </tr>
+                        </thead>
+                        <tbody id="subject-rows">
+                        <tr><td class="attribute-empty-state" colspan="5">Load users to get started.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p class="attribute-status" id="subject-list-status" role="status" aria-live="polite">
+                    Users have not been loaded.
+                </p>
+
+                <div class="attribute-dictionary-header resource-values-header">
+                    <div>
+                        <h2>Subject attribute values</h2>
+                        <p id="selected-subject-label">Select a user to view or manage their attribute values.</p>
+                    </div>
+                    <div class="attribute-toolbar">
+                        <label class="form-field" for="subject-attribute-filter-attribute-id">
+                            <span>Attribute</span>
+                            <select id="subject-attribute-filter-attribute-id">
+                                <option value="">All subject attributes</option>
+                            </select>
+                        </label>
+                        <button class="secondary-button" id="filter-subject-attributes" type="button">Filter</button>
+                        <button class="primary-button" id="new-subject-attribute" type="button" disabled>Add value</button>
+                    </div>
+                </div>
+
+                <form class="attribute-form" id="subject-attribute-form" hidden>
+                    <h3 id="subject-attribute-form-title">Add subject attribute value</h3>
+                    <div class="attribute-form-grid">
+                        <label class="form-field">
+                            <span>Subject ID</span>
+                            <input id="subject-attribute-subject-id" name="subjectId" type="number" readonly required>
+                        </label>
+                        <label class="form-field">
+                            <span>Attribute</span>
+                            <select id="subject-attribute-attribute-id" name="attributeId" required>
+                                <option value="">Load subject attributes</option>
+                            </select>
+                        </label>
+                        <label class="form-field">
+                            <span>Value</span>
+                            <input id="subject-attribute-value-text" name="valueText" type="text" required>
+                        </label>
+                    </div>
+                    <p class="attribute-status">For multi-valued attributes, add one value per record.</p>
+                    <div class="attribute-form-actions">
+                        <button class="primary-button" id="save-subject-attribute" type="submit">Save value</button>
+                        <button class="secondary-button" id="cancel-subject-attribute" type="button">Cancel</button>
+                    </div>
+                </form>
+
+                <div class="attribute-table-wrap">
+                    <table class="attribute-table">
+                        <thead>
+                        <tr>
+                            <th scope="col">ID</th>
+                            <th scope="col">Attribute</th>
+                            <th scope="col">Value</th>
+                            <th scope="col"><span class="visually-hidden">Actions</span></th>
+                        </tr>
+                        </thead>
+                        <tbody id="subject-attribute-rows">
+                        <tr><td class="attribute-empty-state" colspan="4">Select a user to load subject attribute values.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p class="attribute-status" id="subject-attribute-status" role="status" aria-live="polite">
+                    Subject attribute values have not been loaded.
+                </p>
             </section>
 
             <section class="create-bucket-panel" id="create-bucket-panel" hidden

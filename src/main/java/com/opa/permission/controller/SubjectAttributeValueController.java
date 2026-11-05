@@ -7,6 +7,8 @@ import com.opa.permission.model.UserAccount;
 import com.opa.permission.service.AttributeDefinitionService;
 import com.opa.permission.service.SubjectAttributeValueService;
 import com.opa.permission.service.UserAccountService;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -44,10 +46,27 @@ public class SubjectAttributeValueController {
     @GetMapping
     public ResponseEntity<?> list(
             @RequestParam(value = "subjectId", required = false) Long subjectId,
-            @RequestParam(value = "attributeId", required = false) Long attributeId) {
+            @RequestParam(value = "attributeId", required = false) Long attributeId,
+            @AuthenticationPrincipal Jwt jwt) {
+        Long tenantId = tenantId(jwt);
+        if (tenantId == null) {
+            return unauthorized();
+        }
+
         QueryWrapper<SubjectAttributeValue> query = new QueryWrapper<>();
         if (subjectId != null) {
+            if (!belongsToTenant(subjectId, tenantId)) {
+                return notFound("Subject not found");
+            }
             query.eq("subject_id", subjectId);
+        } else {
+            List<Long> subjectIds = userAccountService.listByTenantId(tenantId).stream()
+                    .map(UserAccount::getUserId)
+                    .toList();
+            if (subjectIds.isEmpty()) {
+                return ResponseEntity.ok(List.of());
+            }
+            query.in("subject_id", subjectIds);
         }
         if (attributeId != null) {
             query.eq("attribute_id", attributeId);
@@ -57,20 +76,31 @@ public class SubjectAttributeValueController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getById(@PathVariable("id") Long id) {
+    public ResponseEntity<?> getById(@PathVariable("id") Long id,
+                                     @AuthenticationPrincipal Jwt jwt) {
+        Long tenantId = tenantId(jwt);
+        if (tenantId == null) {
+            return unauthorized();
+        }
         SubjectAttributeValue value = subjectAttributeValueService.getById(id);
-        return value == null ? notFound() : ResponseEntity.ok(value);
+        return value == null || !belongsToTenant(value.getSubjectId(), tenantId)
+                ? notFound()
+                : ResponseEntity.ok(value);
     }
 
     @PostMapping
-    public ResponseEntity<?> create(@RequestBody(required = false) SubjectAttributeValueRequest request) {
+    public ResponseEntity<?> create(@RequestBody(required = false) SubjectAttributeValueRequest request,
+                                    @AuthenticationPrincipal Jwt jwt) {
+        Long tenantId = tenantId(jwt);
+        if (tenantId == null) {
+            return unauthorized();
+        }
         String requestError = validateRequest(request);
         if (requestError != null) {
             return badRequest(requestError);
         }
 
-        UserAccount subject = userAccountService.getById(request.subjectId());
-        if (subject == null) {
+        if (!belongsToTenant(request.subjectId(), tenantId)) {
             return notFound("Subject not found");
         }
         AttributeDefinition definition = attributeDefinitionService.getById(request.attributeId());
@@ -104,7 +134,12 @@ public class SubjectAttributeValueController {
 
     @PutMapping("/{id}")
     public ResponseEntity<?> update(@PathVariable("id") Long id,
-                                    @RequestBody(required = false) SubjectAttributeValueRequest request) {
+                                    @RequestBody(required = false) SubjectAttributeValueRequest request,
+                                    @AuthenticationPrincipal Jwt jwt) {
+        Long tenantId = tenantId(jwt);
+        if (tenantId == null) {
+            return unauthorized();
+        }
         String requestError = validateRequest(request);
         if (requestError != null) {
             return badRequest(requestError);
@@ -114,7 +149,10 @@ public class SubjectAttributeValueController {
         if (existing == null) {
             return notFound();
         }
-        if (userAccountService.getById(request.subjectId()) == null) {
+        if (!belongsToTenant(existing.getSubjectId(), tenantId)) {
+            return notFound();
+        }
+        if (!belongsToTenant(request.subjectId(), tenantId)) {
             return notFound("Subject not found");
         }
         AttributeDefinition definition = attributeDefinitionService.getById(request.attributeId());
@@ -135,6 +173,7 @@ public class SubjectAttributeValueController {
         existing.setSubjectId(request.subjectId());
         existing.setAttributeId(request.attributeId());
         existing.setValueText(valueResult.valueText());
+        existing.setValueJson(null);
         existing.setUpdateTime(Instant.now().toEpochMilli());
         if (!subjectAttributeValueService.updateById(existing)) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -144,8 +183,14 @@ public class SubjectAttributeValueController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> delete(@PathVariable("id") Long id) {
-        if (subjectAttributeValueService.getById(id) == null) {
+    public ResponseEntity<?> delete(@PathVariable("id") Long id,
+                                    @AuthenticationPrincipal Jwt jwt) {
+        Long tenantId = tenantId(jwt);
+        if (tenantId == null) {
+            return unauthorized();
+        }
+        SubjectAttributeValue existing = subjectAttributeValueService.getById(id);
+        if (existing == null || !belongsToTenant(existing.getSubjectId(), tenantId)) {
             return notFound();
         }
         if (!subjectAttributeValueService.removeById(id)) {
@@ -210,8 +255,26 @@ public class SubjectAttributeValueController {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiError(message));
     }
 
+    private static ResponseEntity<ApiError> unauthorized() {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(new ApiError("A valid bearer token with a tenant_id claim is required"));
+    }
+
     private static ResponseEntity<ApiError> conflict(String message) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(new ApiError(message));
+    }
+
+    private Long tenantId(Jwt jwt) {
+        if (jwt == null) {
+            return null;
+        }
+        Object claim = jwt.getClaims().get("tenant_id");
+        return claim instanceof Number number ? number.longValue() : null;
+    }
+
+    private boolean belongsToTenant(Long subjectId, Long tenantId) {
+        UserAccount subject = userAccountService.getById(subjectId);
+        return subject != null && tenantId.equals(subject.getTenantId());
     }
 
     public record SubjectAttributeValueRequest(Long subjectId, Long attributeId, String valueText) {

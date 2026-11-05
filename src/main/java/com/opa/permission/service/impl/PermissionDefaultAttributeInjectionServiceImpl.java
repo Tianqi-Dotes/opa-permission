@@ -5,22 +5,32 @@ import com.opa.permission.model.AbacResource;
 import com.opa.permission.model.AttributeDefinition;
 import com.opa.permission.model.PermissionDefaultAttributeWrite;
 import com.opa.permission.model.ResourceAttributeValue;
+import com.opa.permission.model.Role;
+import com.opa.permission.model.SubjectIdProvider;
 import com.opa.permission.model.SubjectAttributeValue;
+import com.opa.permission.model.UserAccount;
+import com.opa.permission.model.UserRole;
 import com.opa.permission.service.AttributeDefinitionService;
 import com.opa.permission.service.DefaultAttributeInjectionException;
 import com.opa.permission.service.PermissionDefaultAttributeInjectionService;
 import com.opa.permission.service.PermissionDefaultAttributeWriteService;
 import com.opa.permission.service.ResourceAttributeValueService;
+import com.opa.permission.service.RoleService;
 import com.opa.permission.service.SubjectAttributeValueService;
+import com.opa.permission.service.UserAccountService;
+import com.opa.permission.service.UserRoleService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.time.Instant;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -36,16 +46,25 @@ public class PermissionDefaultAttributeInjectionServiceImpl
     private final AttributeDefinitionService attributeDefinitionService;
     private final SubjectAttributeValueService subjectAttributeValueService;
     private final ResourceAttributeValueService resourceAttributeValueService;
+    private final UserAccountService userAccountService;
+    private final UserRoleService userRoleService;
+    private final RoleService roleService;
 
     public PermissionDefaultAttributeInjectionServiceImpl(
             PermissionDefaultAttributeWriteService defaultAttributeWriteService,
             AttributeDefinitionService attributeDefinitionService,
             SubjectAttributeValueService subjectAttributeValueService,
-            ResourceAttributeValueService resourceAttributeValueService) {
+            ResourceAttributeValueService resourceAttributeValueService,
+            UserAccountService userAccountService,
+            UserRoleService userRoleService,
+            RoleService roleService) {
         this.defaultAttributeWriteService = defaultAttributeWriteService;
         this.attributeDefinitionService = attributeDefinitionService;
         this.subjectAttributeValueService = subjectAttributeValueService;
         this.resourceAttributeValueService = resourceAttributeValueService;
+        this.userAccountService = userAccountService;
+        this.userRoleService = userRoleService;
+        this.roleService = roleService;
     }
 
     @Override
@@ -60,41 +79,46 @@ public class PermissionDefaultAttributeInjectionServiceImpl
         if (writes.isEmpty()) {
             return;
         }
-        if (jwt == null) {
-            throw new DefaultAttributeInjectionException(
-                    "A JWT is required to inject default attributes for permission " + permissionId);
-        }
 
-        List<PreparedWrite> preparedWrites = writes.stream()
-                .map(write -> prepareWrite(permissionId, write, jwt))
-                .filter(Objects::nonNull)
-                .toList();
-        if (preparedWrites.isEmpty()) {
-            return;
-        }
-
-        boolean needsSubject = preparedWrites.stream()
-                .anyMatch(write -> "subject".equals(write.configuration().getTargetType()));
-        boolean needsResource = preparedWrites.stream()
-                .anyMatch(write -> "resource".equals(write.configuration().getTargetType()));
-        for (PreparedWrite prepared : preparedWrites) {
-            String targetType = prepared.configuration().getTargetType();
+        boolean needsSubject = false;
+        boolean needsResource = false;
+        for (PermissionDefaultAttributeWrite write : writes) {
+            String targetType = write.getTargetType();
             if (!"subject".equals(targetType) && !"resource".equals(targetType)) {
                 throw new DefaultAttributeInjectionException(
                         "Unsupported attribute target type: " + targetType);
             }
+            needsSubject |= "subject".equals(targetType);
+            needsResource |= "resource".equals(targetType);
         }
-        Long subjectId = needsSubject ? longClaim(jwt, "user_id") : null;
+
+        if (needsResource && jwt == null) {
+            throw new DefaultAttributeInjectionException(
+                    "A JWT is required to inject resource defaults for permission " + permissionId);
+        }
+        Long subjectId = needsSubject ? subjectId(responseBody) : null;
         Long resourceId = needsResource ? resourceId(responseBody) : null;
         if (needsSubject && subjectId == null) {
             throw new DefaultAttributeInjectionException(
-                    "The JWT is missing the user_id claim required by permission " + permissionId);
+                    "The successful response for permission " + permissionId
+                            + " did not provide the target subject ID");
         }
         if (needsResource && resourceId == null) {
             throw new DefaultAttributeInjectionException(
                     "The successful response for permission " + permissionId
                             + " did not contain a resource ID");
         }
+
+        Map<String, Object> subjectContext =
+                needsSubject ? subjectAttributeContext(permissionId, subjectId) : Map.of();
+        Map<String, Object> actorContext = jwt == null ? Map.of() : jwt.getClaims();
+        List<PreparedWrite> preparedWrites = writes.stream()
+                .map(write -> prepareWrite(
+                        permissionId,
+                        write,
+                        "subject".equals(write.getTargetType()) ? subjectContext : actorContext))
+                .filter(Objects::nonNull)
+                .toList();
 
         for (PreparedWrite prepared : preparedWrites) {
             PermissionDefaultAttributeWrite configuration = prepared.configuration();
@@ -123,9 +147,11 @@ public class PermissionDefaultAttributeInjectionServiceImpl
         }
     }
 
-    private PreparedWrite prepareWrite(Long permissionId, PermissionDefaultAttributeWrite write, Jwt jwt) {
+    private PreparedWrite prepareWrite(Long permissionId,
+                                       PermissionDefaultAttributeWrite write,
+                                       Map<String, Object> context) {
         if (write.getDefaultValueText() != null) {
-            List<AttributeValue> values = resolveText(permissionId, write, jwt);
+            List<AttributeValue> values = resolveText(permissionId, write, context);
             return values.isEmpty() ? null : new PreparedWrite(write, values);
         }
         if (write.getDefaultValueJson() != null) {
@@ -137,13 +163,13 @@ public class PermissionDefaultAttributeInjectionServiceImpl
 
     private List<AttributeValue> resolveText(Long permissionId,
                                              PermissionDefaultAttributeWrite write,
-                                             Jwt jwt) {
+                                             Map<String, Object> context) {
         String template = write.getDefaultValueText();
         Matcher wholePlaceholder = PLACEHOLDER_PATTERN.matcher(template);
         if (wholePlaceholder.matches()) {
-            Object claim = claimValue(jwt, wholePlaceholder.group(1));
+            Object claim = claimValue(context, wholePlaceholder.group(1));
             if (claim == null) {
-                LOGGER.warn("Skipping default attribute write {} for permission {}: JWT claim '{}' is absent",
+                LOGGER.warn("Skipping default attribute write {} for permission {}: template value '{}' is absent",
                         write.getId(), permissionId, wholePlaceholder.group(1));
                 return List.of();
             }
@@ -153,7 +179,7 @@ public class PermissionDefaultAttributeInjectionServiceImpl
                         .map(value -> new AttributeValue(String.valueOf(value), null))
                         .toList();
                 if (resolvedValues.isEmpty()) {
-                    LOGGER.warn("Skipping default attribute write {} for permission {}: JWT claim '{}' is empty",
+                    LOGGER.warn("Skipping default attribute write {} for permission {}: template value '{}' is empty",
                             write.getId(), permissionId, wholePlaceholder.group(1));
                 }
                 return resolvedValues;
@@ -164,9 +190,9 @@ public class PermissionDefaultAttributeInjectionServiceImpl
         Matcher matcher = PLACEHOLDER_PATTERN.matcher(template);
         StringBuffer resolved = new StringBuffer();
         while (matcher.find()) {
-            Object claim = claimValue(jwt, matcher.group(1));
+            Object claim = claimValue(context, matcher.group(1));
             if (claim == null) {
-                LOGGER.warn("Skipping default attribute write {} for permission {}: JWT claim '{}' is absent",
+                LOGGER.warn("Skipping default attribute write {} for permission {}: template value '{}' is absent",
                         write.getId(), permissionId, matcher.group(1));
                 return List.of();
             }
@@ -180,10 +206,10 @@ public class PermissionDefaultAttributeInjectionServiceImpl
         return List.of(new AttributeValue(resolved.toString(), null));
     }
 
-    private Object claimValue(Jwt jwt, String claimName) {
-        Object value = jwt.getClaims().get(claimName);
+    private Object claimValue(Map<String, Object> context, String claimName) {
+        Object value = context.get(claimName);
         if (value == null && "role".equals(claimName)) {
-            value = jwt.getClaims().get("roles");
+            value = context.get("roles");
         }
         return value;
     }
@@ -311,9 +337,45 @@ public class PermissionDefaultAttributeInjectionServiceImpl
         return null;
     }
 
-    private Long longClaim(Jwt jwt, String claimName) {
-        Object claim = jwt.getClaims().get(claimName);
-        return claim instanceof Number number ? number.longValue() : null;
+    private Long subjectId(Object responseBody) {
+        return responseBody instanceof SubjectIdProvider provider ? provider.subjectId() : null;
+    }
+
+    private Map<String, Object> subjectAttributeContext(Long permissionId, Long subjectId) {
+        UserAccount subject = userAccountService.getById(subjectId);
+        if (subject == null) {
+            throw new DefaultAttributeInjectionException(
+                    "Target subject " + subjectId + " for permission " + permissionId + " was not found");
+        }
+        if (subject.getTenantId() == null) {
+            throw new DefaultAttributeInjectionException(
+                    "Target subject " + subjectId + " has no tenant ID");
+        }
+
+        Map<String, Object> context = new HashMap<>();
+        context.put("tenant_id", subject.getTenantId());
+        if (StringUtils.hasText(subject.getGroupName())) {
+            context.put("group_name", subject.getGroupName());
+        }
+
+        List<Long> roleIds = userRoleService.list(new LambdaQueryWrapper<UserRole>()
+                        .select(UserRole::getRoleId)
+                        .eq(UserRole::getUserId, subject.getUserId())
+                        .eq(UserRole::getTenantId, subject.getTenantId()))
+                .stream()
+                .map(UserRole::getRoleId)
+                .distinct()
+                .toList();
+        List<String> roles = (roleIds.isEmpty() ? List.<Role>of() : roleService.listByIds(roleIds)).stream()
+                .filter(role -> "active".equalsIgnoreCase(role.getStatus()))
+                .map(Role::getRoleName)
+                .filter(StringUtils::hasText)
+                .distinct()
+                .toList();
+        if (!roles.isEmpty()) {
+            context.put("roles", roles);
+        }
+        return context;
     }
 
     private long now() {

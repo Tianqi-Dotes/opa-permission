@@ -7,6 +7,7 @@
 CREATE TABLE IF NOT EXISTS test.resources (
                                          id                  BIGSERIAL PRIMARY KEY,
                                          parent_resource_id BIGINT,
+                                         external            BOOLEAN NOT NULL DEFAULT FALSE,
                                          resource_code       VARCHAR(256) NOT NULL UNIQUE,
                                          resource_type       VARCHAR(64) NOT NULL,
                                          resource_name       VARCHAR(256),

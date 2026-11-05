@@ -51,6 +51,7 @@ public class AbacResourceController {
         resource.setResourceType("bucket");
         resource.setResourceName(bucketName);
         resource.setOwner("tenant:" + tenantId);
+        resource.setExternal(false);
         resource.setStatus("active");
         resource.setCreateTime(now);
         resource.setUpdateTime(now);

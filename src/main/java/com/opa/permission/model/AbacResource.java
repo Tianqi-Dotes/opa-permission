@@ -12,7 +12,9 @@ public class AbacResource {
     private Long id;
     //all dynamic loading tree structure, parent-child relationship
     //just use to store
+    //internal no tree structure, external with dynamic
     private Long parentResourceId;
+    private Boolean external;
     private String resourceCode;//trino:prod.sales.orders
     private String resourceType;
     private String resourceName;

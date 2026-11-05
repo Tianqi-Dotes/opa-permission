@@ -327,8 +327,81 @@
                      aria-labelledby="resource-attributes-title">
                 <div class="attribute-dictionary-header">
                     <div>
-                        <h2 id="resource-attributes-title">Resource attribute values</h2>
-                        <p>Assign resource-category dictionary attributes to registered resources.</p>
+                        <h2 id="resource-attributes-title">Resource Attributes</h2>
+                        <p>Browse internal and external resources, then manage their attribute values.</p>
+                    </div>
+                </div>
+                <div class="resource-scope-tabs" role="tablist" aria-label="Resource scope">
+                    <button class="resource-scope-tab active" id="internal-resource-tab" type="button"
+                            role="tab" aria-selected="true" aria-controls="internal-resource-panel" tabindex="0">
+                        Internal
+                    </button>
+                    <button class="resource-scope-tab" id="external-resource-tab" type="button"
+                            role="tab" aria-selected="false" aria-controls="external-resource-panel" tabindex="-1">
+                        External
+                    </button>
+                </div>
+                <div class="resource-scope-panel" id="internal-resource-panel" role="tabpanel"
+                     aria-labelledby="internal-resource-tab">
+                    <div class="attribute-toolbar resource-list-toolbar">
+                        <button class="secondary-button" id="refresh-internal-resources" type="button">
+                            Refresh internal resources
+                        </button>
+                    </div>
+                    <div class="attribute-table-wrap">
+                        <table class="attribute-table">
+                            <thead>
+                            <tr>
+                                <th scope="col">ID</th>
+                                <th scope="col">Name</th>
+                                <th scope="col">Type</th>
+                                <th scope="col">Resource Code</th>
+                                <th scope="col">Status</th>
+                                <th scope="col"><span class="visually-hidden">Actions</span></th>
+                            </tr>
+                            </thead>
+                            <tbody id="internal-resource-rows">
+                            <tr><td class="attribute-empty-state" colspan="6">Load internal resources to get started.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="attribute-status" id="internal-resource-list-status" role="status" aria-live="polite">
+                        Internal resources have not been loaded.
+                    </p>
+                </div>
+                <div class="resource-scope-panel" id="external-resource-panel" role="tabpanel"
+                     aria-labelledby="external-resource-tab" hidden>
+                    <div class="attribute-toolbar resource-list-toolbar">
+                        <button class="secondary-button" id="refresh-external-resources" type="button">
+                            Refresh external resources
+                        </button>
+                    </div>
+                    <div class="attribute-table-wrap">
+                        <table class="attribute-table">
+                            <thead>
+                            <tr>
+                                <th scope="col">ID</th>
+                                <th scope="col">Name</th>
+                                <th scope="col">Type</th>
+                                <th scope="col">Resource Code</th>
+                                <th scope="col">Status</th>
+                                <th scope="col"><span class="visually-hidden">Actions</span></th>
+                            </tr>
+                            </thead>
+                            <tbody id="external-resource-rows">
+                            <tr><td class="attribute-empty-state" colspan="6">Load external resources to get started.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="attribute-status" id="external-resource-list-status" role="status" aria-live="polite">
+                        External resources have not been loaded.
+                    </p>
+                </div>
+
+                <div class="attribute-dictionary-header resource-values-header">
+                    <div>
+                        <h2>Resource attribute values</h2>
+                        <p id="selected-resource-label">Select a resource to view or manage its attribute values.</p>
                     </div>
                     <div class="attribute-toolbar">
                         <label class="form-field" for="resource-attribute-filter-resource-id">

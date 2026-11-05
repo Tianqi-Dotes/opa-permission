@@ -1,5 +1,6 @@
 package com.opa.permission.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.opa.permission.model.AbacResource;
 import com.opa.permission.service.AbacResourceService;
 import org.springframework.dao.DuplicateKeyException;
@@ -8,9 +9,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.util.StringUtils;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Instant;
@@ -22,6 +25,29 @@ public class AbacResourceController {
 
     public AbacResourceController(AbacResourceService abacResourceService) {
         this.abacResourceService = abacResourceService;
+    }
+
+    @GetMapping
+    public ResponseEntity<?> list(@RequestParam(value = "external", required = false) Boolean external,
+                                  @AuthenticationPrincipal Jwt jwt) {
+        if (jwt == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new ApiError("A valid bearer token is required"));
+        }
+
+        Long tenantId = longClaim(jwt, "tenant_id");
+        if (tenantId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new ApiError("The bearer token is missing the tenant_id claim"));
+        }
+
+        QueryWrapper<AbacResource> query = new QueryWrapper<AbacResource>()
+                .eq("owner", tenantId.toString());
+        if (external != null) {
+            query.eq("external", external);
+        }
+        query.orderByAsc("resource_type", "resource_name", "id");
+        return ResponseEntity.ok(abacResourceService.list(query));
     }
 
     @PostMapping("/buckets")
@@ -50,7 +76,7 @@ public class AbacResourceController {
         resource.setResourceCode("tenant:" + tenantId + ":bucket:" + bucketName);
         resource.setResourceType("bucket");
         resource.setResourceName(bucketName);
-        resource.setOwner("tenant:" + tenantId);
+        resource.setOwner(tenantId.toString());
         resource.setExternal(false);
         resource.setStatus("active");
         resource.setCreateTime(now);

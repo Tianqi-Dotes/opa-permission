@@ -117,7 +117,8 @@ INSERT INTO test.permissions (
     (19, 'Read Resource Attribute Value', '/api/abac/resource-attributes/*', 'GET', 'active', 'Read a resource attribute value', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
     (20, 'Update Resource Attribute Value', '/api/abac/resource-attributes/*', 'PUT', 'active', 'Update a resource attribute value', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
     (21, 'Delete Resource Attribute Value', '/api/abac/resource-attributes/*', 'DELETE', 'active', 'Delete a resource attribute value', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
-    (22, 'Create ABAC Bucket Resource', '/api/abac/resources/buckets', 'POST', 'active', 'Register a bucket resource for the authenticated tenant', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT)
+    (22, 'Create ABAC Bucket Resource', '/api/abac/resources/buckets', 'POST', 'active', 'Register a bucket resource for the authenticated tenant', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
+    (23, 'List ABAC Resources', '/api/abac/resources', 'GET', 'active', 'List resources owned by the authenticated tenant', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT)
 ON CONFLICT (permission_id) DO UPDATE SET
     permission_name = EXCLUDED.permission_name,
     resource_pattern = EXCLUDED.resource_pattern,

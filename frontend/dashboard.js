@@ -159,6 +159,17 @@ const tenantTemplateTab = document.querySelector("#tenant-template-tab");
 const defaultTemplatePanel = document.querySelector("#default-template-panel");
 const tenantTemplatePanel = document.querySelector("#tenant-template-panel");
 const resourceAttributesPanel = document.querySelector("#resource-attributes-panel");
+const internalResourceTab = document.querySelector("#internal-resource-tab");
+const externalResourceTab = document.querySelector("#external-resource-tab");
+const internalResourcePanel = document.querySelector("#internal-resource-panel");
+const externalResourcePanel = document.querySelector("#external-resource-panel");
+const internalResourceRows = document.querySelector("#internal-resource-rows");
+const externalResourceRows = document.querySelector("#external-resource-rows");
+const internalResourceListStatus = document.querySelector("#internal-resource-list-status");
+const externalResourceListStatus = document.querySelector("#external-resource-list-status");
+const refreshInternalResourcesButton = document.querySelector("#refresh-internal-resources");
+const refreshExternalResourcesButton = document.querySelector("#refresh-external-resources");
+const selectedResourceLabel = document.querySelector("#selected-resource-label");
 const resourceAttributeFilterResourceId = document.querySelector("#resource-attribute-filter-resource-id");
 const resourceAttributeFilterAttributeId = document.querySelector("#resource-attribute-filter-attribute-id");
 const filterResourceAttributesButton = document.querySelector("#filter-resource-attributes");
@@ -198,6 +209,9 @@ let resourceAttributeDefinitions = [];
 let resourceAttributeListRequestId = 0;
 let resourceAttributeMutationInProgress = false;
 let editingResourceAttributeId = null;
+let activeResourceScope = "internal";
+let selectedResource = null;
+const resourceListRequestIds = {internal: 0, external: 0};
 
 function getTokenSubject(encodedToken) {
     try {
@@ -222,6 +236,23 @@ function activateAttributeTemplateTab(selectedTab, shouldFocus = false) {
     tenantTemplateTab.setAttribute("aria-selected", String(!isDefaultTemplate));
     tenantTemplateTab.tabIndex = isDefaultTemplate ? -1 : 0;
     tenantTemplatePanel.hidden = isDefaultTemplate;
+    if (shouldFocus) {
+        selectedTab.focus();
+    }
+}
+
+function activateResourceScopeTab(selectedTab, shouldFocus = false) {
+    const isInternal = selectedTab === internalResourceTab;
+    internalResourceTab.classList.toggle("active", isInternal);
+    internalResourceTab.setAttribute("aria-selected", String(isInternal));
+    internalResourceTab.tabIndex = isInternal ? 0 : -1;
+    internalResourcePanel.hidden = !isInternal;
+    externalResourceTab.classList.toggle("active", !isInternal);
+    externalResourceTab.setAttribute("aria-selected", String(!isInternal));
+    externalResourceTab.tabIndex = isInternal ? -1 : 0;
+    externalResourcePanel.hidden = isInternal;
+    activeResourceScope = isInternal ? "internal" : "external";
+    loadResourceList(activeResourceScope);
     if (shouldFocus) {
         selectedTab.focus();
     }
@@ -588,6 +619,95 @@ async function loadResourceAttributeDefinitions() {
     populateResourceAttributeSelects();
 }
 
+function renderResourceList(scope, resources) {
+    const rows = scope === "external" ? externalResourceRows : internalResourceRows;
+    rows.replaceChildren();
+    if (resources.length === 0) {
+        const emptyRow = document.createElement("tr");
+        const emptyCell = document.createElement("td");
+        emptyCell.className = "attribute-empty-state";
+        emptyCell.colSpan = 6;
+        emptyCell.textContent = `No ${scope} resources found.`;
+        emptyRow.append(emptyCell);
+        rows.append(emptyRow);
+        return;
+    }
+
+    resources.forEach((resource) => {
+        const row = document.createElement("tr");
+        [resource.id, resource.resourceName, resource.resourceType,
+            resource.resourceCode, resource.status].forEach((value) => {
+            const cell = document.createElement("td");
+            cell.textContent = value == null ? "" : String(value);
+            row.append(cell);
+        });
+
+        const actionsCell = document.createElement("td");
+        const selectButton = document.createElement("button");
+        selectButton.className = "secondary-button";
+        selectButton.type = "button";
+        selectButton.textContent = "Select";
+        selectButton.setAttribute("aria-label", `Select resource ${resource.resourceName || resource.id}`);
+        selectButton.addEventListener("click", () => {
+            selectedResource = resource;
+            resourceAttributeFilterResourceId.value = String(resource.id);
+            selectedResourceLabel.textContent =
+                `Selected ${resource.resourceName || resource.resourceCode} (ID ${resource.id}).`;
+            loadResourceAttributeValues();
+        });
+        actionsCell.append(selectButton);
+        row.append(actionsCell);
+        rows.append(row);
+    });
+}
+
+async function loadResourceList(scope) {
+    const isExternal = scope === "external";
+    const rows = isExternal ? externalResourceRows : internalResourceRows;
+    const status = isExternal ? externalResourceListStatus : internalResourceListStatus;
+    const refreshButton = isExternal ? refreshExternalResourcesButton : refreshInternalResourcesButton;
+    const requestId = ++resourceListRequestIds[scope];
+    refreshButton.disabled = true;
+    status.textContent = `Loading ${scope} resources...`;
+
+    try {
+        const query = new URLSearchParams({external: String(isExternal)});
+        const response = await fetch(`${apiBaseUrl}/api/abac/resources?${query.toString()}`, {
+            headers: {Authorization: `Bearer ${token}`}
+        });
+        if (!response.ok) {
+            throw new Error(await getApiError(response));
+        }
+
+        const resources = await response.json();
+        if (!Array.isArray(resources)) {
+            throw new Error("The resource list response was not a list.");
+        }
+        if (requestId !== resourceListRequestIds[scope]) {
+            return;
+        }
+        renderResourceList(scope, resources);
+        status.textContent =
+            `Loaded ${resources.length} ${scope} resource${resources.length === 1 ? "" : "s"}.`;
+    } catch (error) {
+        if (requestId === resourceListRequestIds[scope]) {
+            rows.replaceChildren();
+            const errorRow = document.createElement("tr");
+            const errorCell = document.createElement("td");
+            errorCell.className = "attribute-empty-state";
+            errorCell.colSpan = 6;
+            errorCell.textContent = error.message || `Unable to load ${scope} resources.`;
+            errorRow.append(errorCell);
+            rows.append(errorRow);
+            status.textContent = error.message || `Unable to load ${scope} resources.`;
+        }
+    } finally {
+        if (requestId === resourceListRequestIds[scope]) {
+            refreshButton.disabled = false;
+        }
+    }
+}
+
 function renderResourceAttributeValues(values) {
     resourceAttributeRows.replaceChildren();
     if (values.length === 0) {
@@ -641,6 +761,15 @@ async function loadResourceAttributeValues() {
         resourceAttributeStatus.textContent = "Resource ID must be a positive integer.";
         resourceAttributeFilterResourceId.focus();
         return;
+    }
+    if (resourceId) {
+        if (!selectedResource || String(selectedResource.id) !== resourceId) {
+            selectedResource = null;
+            selectedResourceLabel.textContent = `Resource ID ${resourceId}`;
+        }
+    } else {
+        selectedResource = null;
+        selectedResourceLabel.textContent = "Showing values for all resources.";
     }
 
     const query = new URLSearchParams();
@@ -710,6 +839,7 @@ async function loadResourceAttributes() {
         resourceAttributeRows.append(errorRow);
         resourceAttributeStatus.textContent = error.message || "Unable to load resource attributes.";
     }
+    await loadResourceList(activeResourceScope);
 }
 
 function openResourceAttributeForm(value = null) {
@@ -1052,8 +1182,24 @@ tenantTemplateTab.addEventListener("click", () => activateAttributeTemplateTab(t
         }
     });
 });
+internalResourceTab.addEventListener("click", () => activateResourceScopeTab(internalResourceTab));
+externalResourceTab.addEventListener("click", () => activateResourceScopeTab(externalResourceTab));
+[internalResourceTab, externalResourceTab].forEach((tab) => {
+    tab.addEventListener("keydown", (event) => {
+        if (event.key === "ArrowLeft" || event.key === "ArrowRight"
+            || event.key === "Home" || event.key === "End") {
+            event.preventDefault();
+            const selectedTab = event.key === "Home" ? internalResourceTab
+                : event.key === "End" ? externalResourceTab
+                    : tab === internalResourceTab ? externalResourceTab : internalResourceTab;
+            activateResourceScopeTab(selectedTab, true);
+        }
+    });
+});
 createBucketForm.addEventListener("submit", createBucket);
 filterResourceAttributesButton.addEventListener("click", loadResourceAttributeValues);
+refreshInternalResourcesButton.addEventListener("click", () => loadResourceList("internal"));
+refreshExternalResourcesButton.addEventListener("click", () => loadResourceList("external"));
 newResourceAttributeButton.addEventListener("click", () => openResourceAttributeForm());
 resourceAttributeForm.addEventListener("submit", saveResourceAttribute);
 cancelResourceAttributeButton.addEventListener("click", resetResourceAttributeForm);

@@ -421,6 +421,7 @@ button {
 .assign-role-panel[hidden],
 .create-bucket-panel[hidden],
 .attribute-dictionary-panel[hidden],
+.resource-scope-panel[hidden],
 .attribute-form[hidden],
 .feature-card[hidden],
 .info-row[hidden] {
@@ -740,6 +741,50 @@ button {
     background: #fafbfe;
     font-size: 10px;
     text-align: center;
+}
+
+.resource-scope-tabs {
+    display: flex;
+    gap: 5px;
+    margin-top: 21px;
+    border-bottom: 1px solid #e9edf3;
+}
+
+.resource-scope-tab {
+    min-height: 39px;
+    padding: 0 14px;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    color: #758197;
+    background: transparent;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.resource-scope-tab:hover,
+.resource-scope-tab.active {
+    color: #315ed0;
+}
+
+.resource-scope-tab.active {
+    border-bottom-color: #416ee8;
+    font-weight: 600;
+}
+
+.resource-scope-tab:focus-visible {
+    outline: 3px solid rgba(65, 110, 232, .2);
+    outline-offset: -3px;
+}
+
+.resource-list-toolbar {
+    margin-top: 14px;
+}
+
+.resource-values-header {
+    margin-top: 25px;
+    padding-top: 22px;
+    border-top: 1px solid #e9edf3;
 }
 
 .attribute-toolbar {

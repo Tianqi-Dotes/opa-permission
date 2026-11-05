@@ -42,6 +42,10 @@
                         <span class="nav-icon" aria-hidden="true">AD</span>
                         <span>Attribute Dictionary</span>
                     </button>
+                    <button class="nav-item" type="button" data-page="attribute-templates">
+                        <span class="nav-icon" aria-hidden="true">AT</span>
+                        <span>Attribute Template</span>
+                    </button>
                     <button class="nav-item" type="button" data-page="subject-attributes">
                         <span class="nav-icon" aria-hidden="true">SA</span>
                         <span>Subject Attributes</span>
@@ -258,6 +262,42 @@
                 <p class="attribute-status" id="attribute-status" role="status" aria-live="polite">
                     Attribute definitions have not been loaded.
                 </p>
+            </section>
+
+            <section class="attribute-dictionary-panel attribute-template-panel" id="attribute-template-panel"
+                     hidden aria-labelledby="attribute-template-title">
+                <div class="attribute-dictionary-header">
+                    <div>
+                        <h2 id="attribute-template-title">Attribute Templates</h2>
+                        <p>Manage platform defaults and tenant-specific attribute overrides.</p>
+                    </div>
+                </div>
+                <div class="attribute-template-tabs" role="tablist" aria-label="Attribute template scope">
+                    <button class="attribute-template-tab active" id="default-template-tab" type="button"
+                            role="tab" aria-selected="true" aria-controls="default-template-panel" tabindex="0">
+                        Default Template
+                    </button>
+                    <button class="attribute-template-tab" id="tenant-template-tab" type="button"
+                            role="tab" aria-selected="false" aria-controls="tenant-template-panel" tabindex="-1">
+                        Tenant Template
+                    </button>
+                </div>
+                <div class="attribute-template-content" id="default-template-panel" role="tabpanel"
+                     aria-labelledby="default-template-tab">
+                    <h3>Platform default template</h3>
+                    <p>Defaults apply across tenants unless overridden by a tenant or an individual subject/resource.</p>
+                    <div class="attribute-template-empty">
+                        Default template values are not connected to a backend API yet.
+                    </div>
+                </div>
+                <div class="attribute-template-content" id="tenant-template-panel" role="tabpanel"
+                     aria-labelledby="tenant-template-tab" hidden>
+                    <h3>Tenant template</h3>
+                    <p>Tenant-specific defaults override platform defaults for that tenant.</p>
+                    <div class="attribute-template-empty">
+                        Tenant template values are not connected to a backend API yet.
+                    </div>
+                </div>
             </section>
 
             <section class="create-bucket-panel" id="create-bucket-panel" hidden

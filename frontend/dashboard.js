@@ -31,6 +31,14 @@ const pages = {
         featureDescription: "Manage attribute names, categories, and data types used by the policy editor.",
         symbol: "AD"
     },
+    "attribute-templates": {
+        section: "ABAC",
+        title: "Attribute Template",
+        description: "Manage platform defaults and tenant-specific attribute overrides.",
+        featureTitle: "Attribute templates",
+        featureDescription: "Configure default attributes for the platform and individual tenants.",
+        symbol: "AT"
+    },
     "subject-attributes": {
         section: "ABAC",
         title: "Subject Attributes",
@@ -145,6 +153,11 @@ const saveAttributeButton = document.querySelector("#save-attribute");
 const cancelAttributeButton = document.querySelector("#cancel-attribute");
 const attributeRows = document.querySelector("#attribute-rows");
 const attributeStatus = document.querySelector("#attribute-status");
+const attributeTemplatePanel = document.querySelector("#attribute-template-panel");
+const defaultTemplateTab = document.querySelector("#default-template-tab");
+const tenantTemplateTab = document.querySelector("#tenant-template-tab");
+const defaultTemplatePanel = document.querySelector("#default-template-panel");
+const tenantTemplatePanel = document.querySelector("#tenant-template-panel");
 const resourceAttributesPanel = document.querySelector("#resource-attributes-panel");
 const resourceAttributeFilterResourceId = document.querySelector("#resource-attribute-filter-resource-id");
 const resourceAttributeFilterAttributeId = document.querySelector("#resource-attribute-filter-attribute-id");
@@ -199,6 +212,21 @@ function getTokenSubject(encodedToken) {
     }
 }
 
+function activateAttributeTemplateTab(selectedTab, shouldFocus = false) {
+    const isDefaultTemplate = selectedTab === defaultTemplateTab;
+    defaultTemplateTab.classList.toggle("active", isDefaultTemplate);
+    defaultTemplateTab.setAttribute("aria-selected", String(isDefaultTemplate));
+    defaultTemplateTab.tabIndex = isDefaultTemplate ? 0 : -1;
+    defaultTemplatePanel.hidden = !isDefaultTemplate;
+    tenantTemplateTab.classList.toggle("active", !isDefaultTemplate);
+    tenantTemplateTab.setAttribute("aria-selected", String(!isDefaultTemplate));
+    tenantTemplateTab.tabIndex = isDefaultTemplate ? -1 : 0;
+    tenantTemplatePanel.hidden = isDefaultTemplate;
+    if (shouldFocus) {
+        selectedTab.focus();
+    }
+}
+
 function showPage(pageKey) {
     const page = pages[pageKey];
     if (!page) {
@@ -217,15 +245,19 @@ function showPage(pageKey) {
     const isAssignRolesPage = pageKey === "assign-roles";
     const isPermissionTestPage = pageKey === "test-permissions";
     const isAttributeDictionaryPage = pageKey === "attribute-dictionary";
+    const isAttributeTemplatesPage = pageKey === "attribute-templates";
     const isResourceAttributesPage = pageKey === "resource-attributes";
     const isCreateBucketPage = pageKey === "create-bucket";
     featureCard.hidden = isAssignRolesPage || isPermissionTestPage
-        || isAttributeDictionaryPage || isResourceAttributesPage || isCreateBucketPage;
+        || isAttributeDictionaryPage || isAttributeTemplatesPage
+        || isResourceAttributesPage || isCreateBucketPage;
     infoRow.hidden = isAssignRolesPage || isPermissionTestPage
-        || isAttributeDictionaryPage || isResourceAttributesPage || isCreateBucketPage;
+        || isAttributeDictionaryPage || isAttributeTemplatesPage
+        || isResourceAttributesPage || isCreateBucketPage;
     assignRolePanel.hidden = !isAssignRolesPage;
     permissionTestPanel.hidden = !isPermissionTestPage;
     attributeDictionaryPanel.hidden = !isAttributeDictionaryPage;
+    attributeTemplatePanel.hidden = !isAttributeTemplatesPage;
     resourceAttributesPanel.hidden = !isResourceAttributesPage;
     createBucketPanel.hidden = !isCreateBucketPage;
     if (isAssignRolesPage) {
@@ -1006,6 +1038,20 @@ refreshAttributesButton.addEventListener("click", loadAttributeDefinitions);
 attributeCategoryFilter.addEventListener("change", loadAttributeDefinitions);
 attributeForm.addEventListener("submit", saveAttribute);
 cancelAttributeButton.addEventListener("click", resetAttributeForm);
+defaultTemplateTab.addEventListener("click", () => activateAttributeTemplateTab(defaultTemplateTab));
+tenantTemplateTab.addEventListener("click", () => activateAttributeTemplateTab(tenantTemplateTab));
+[defaultTemplateTab, tenantTemplateTab].forEach((tab) => {
+    tab.addEventListener("keydown", (event) => {
+        if (event.key === "ArrowLeft" || event.key === "ArrowRight"
+            || event.key === "Home" || event.key === "End") {
+            event.preventDefault();
+            const selectedTab = event.key === "Home" ? defaultTemplateTab
+                : event.key === "End" ? tenantTemplateTab
+                    : tab === defaultTemplateTab ? tenantTemplateTab : defaultTemplateTab;
+            activateAttributeTemplateTab(selectedTab, true);
+        }
+    });
+});
 createBucketForm.addEventListener("submit", createBucket);
 filterResourceAttributesButton.addEventListener("click", loadResourceAttributeValues);
 newResourceAttributeButton.addEventListener("click", () => openResourceAttributeForm());

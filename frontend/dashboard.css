@@ -679,6 +679,69 @@ button {
     line-height: 1.7;
 }
 
+.attribute-template-tabs {
+    display: flex;
+    gap: 5px;
+    margin-top: 21px;
+    border-bottom: 1px solid #e9edf3;
+}
+
+.attribute-template-tab {
+    min-height: 39px;
+    padding: 0 14px;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    color: #758197;
+    background: transparent;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.attribute-template-tab:hover,
+.attribute-template-tab.active {
+    color: #315ed0;
+}
+
+.attribute-template-tab.active {
+    border-bottom-color: #416ee8;
+    font-weight: 600;
+}
+
+.attribute-template-tab:focus-visible {
+    outline: 3px solid rgba(65, 110, 232, .2);
+    outline-offset: -3px;
+}
+
+.attribute-template-content {
+    padding-top: 19px;
+}
+
+.attribute-template-content h3 {
+    margin: 0 0 7px;
+    color: #34445d;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.attribute-template-content p {
+    margin: 0;
+    color: #8793a6;
+    font-size: 11px;
+    line-height: 1.7;
+}
+
+.attribute-template-empty {
+    margin-top: 16px;
+    padding: 20px 14px;
+    border: 1px dashed #dfe5ef;
+    border-radius: 8px;
+    color: #8995a7;
+    background: #fafbfe;
+    font-size: 10px;
+    text-align: center;
+}
+
 .attribute-toolbar {
     justify-content: flex-end;
 }

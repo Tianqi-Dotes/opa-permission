@@ -47,7 +47,17 @@ WITH missing_role_permissions AS (
                 'Create ABAC Attribute',
                 'Read ABAC Attribute',
                 'Update ABAC Attribute',
-                'Delete ABAC Attribute'
+                'Delete ABAC Attribute',
+                'List Subject Attribute Values',
+                'Create Subject Attribute Value',
+                'Read Subject Attribute Value',
+                'Update Subject Attribute Value',
+                'Delete Subject Attribute Value',
+                'List Resource Attribute Values',
+                'Create Resource Attribute Value',
+                'Read Resource Attribute Value',
+                'Update Resource Attribute Value',
+                'Delete Resource Attribute Value'
             ))
        OR (r.role_name = 'ANALYST' AND p.permission_name = 'Query Trino')
        OR (r.role_name = 'DEVELOPER'

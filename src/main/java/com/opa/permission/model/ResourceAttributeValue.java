@@ -17,10 +17,10 @@ public class ResourceAttributeValue {
     private Long resourceId;
     private Long attributeId;
     private String valueText;
-    @TableField(typeHandler = JacksonTypeHandler.class)
-    private Object valueJson;
-    private OffsetDateTime validFrom;
-    private OffsetDateTime validTo;
+//    @TableField(typeHandler = JacksonTypeHandler.class)
+//    private Object valueJson;//for multi-value attributes, store as JSON array
+//    private OffsetDateTime validFrom;
+//    private OffsetDateTime validTo;
     private Long createTime;
     private Long updateTime;
 }

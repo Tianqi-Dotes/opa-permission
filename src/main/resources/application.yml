@@ -23,7 +23,7 @@ mybatis-plus:
 
 security:
   jwt:
-    secret-base64: ${JWT_SECRET_BASE64:}
+    secret-base64: ${JWT_SECRET_BASE64:DzrR/mocT7yf8TWgPmgqsrJ8OL4FiaE4Tqgd3VbKb8g=}
     expiration-seconds: 900
 
 opa:

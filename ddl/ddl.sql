@@ -106,7 +106,17 @@ INSERT INTO test.permissions (
     (8, 'Create ABAC Attribute', '/api/abac/attributes', 'POST', 'active', 'Create an ABAC attribute definition', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
     (9, 'Read ABAC Attribute', '/api/abac/attributes/*', 'GET', 'active', 'Read an ABAC attribute definition', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
     (10, 'Update ABAC Attribute', '/api/abac/attributes/*', 'PUT', 'active', 'Update an ABAC attribute definition', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
-    (11, 'Delete ABAC Attribute', '/api/abac/attributes/*', 'DELETE', 'active', 'Delete an ABAC attribute definition', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT)
+    (11, 'Delete ABAC Attribute', '/api/abac/attributes/*', 'DELETE', 'active', 'Delete an ABAC attribute definition', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
+    (12, 'List Subject Attribute Values', '/api/abac/subject-attributes', 'GET', 'active', 'List subject attribute values', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
+    (13, 'Create Subject Attribute Value', '/api/abac/subject-attributes', 'POST', 'active', 'Create a subject attribute value', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
+    (14, 'Read Subject Attribute Value', '/api/abac/subject-attributes/*', 'GET', 'active', 'Read a subject attribute value', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
+    (15, 'Update Subject Attribute Value', '/api/abac/subject-attributes/*', 'PUT', 'active', 'Update a subject attribute value', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
+    (16, 'Delete Subject Attribute Value', '/api/abac/subject-attributes/*', 'DELETE', 'active', 'Delete a subject attribute value', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
+    (17, 'List Resource Attribute Values', '/api/abac/resource-attributes', 'GET', 'active', 'List resource attribute values', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
+    (18, 'Create Resource Attribute Value', '/api/abac/resource-attributes', 'POST', 'active', 'Create a resource attribute value', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
+    (19, 'Read Resource Attribute Value', '/api/abac/resource-attributes/*', 'GET', 'active', 'Read a resource attribute value', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
+    (20, 'Update Resource Attribute Value', '/api/abac/resource-attributes/*', 'PUT', 'active', 'Update a resource attribute value', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
+    (21, 'Delete Resource Attribute Value', '/api/abac/resource-attributes/*', 'DELETE', 'active', 'Delete a resource attribute value', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT)
 ON CONFLICT (permission_id) DO UPDATE SET
     permission_name = EXCLUDED.permission_name,
     resource_pattern = EXCLUDED.resource_pattern,

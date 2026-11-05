@@ -10,6 +10,9 @@ import lombok.Data;
 public class AbacResource {
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
+    //all dynamic loading tree structure, parent-child relationship
+    //just use to store
+    private Long parentResourceId;
     private String resourceCode;//trino:prod.sales.orders
     private String resourceType;
     private String resourceName;

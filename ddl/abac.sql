@@ -6,6 +6,7 @@
 
 CREATE TABLE IF NOT EXISTS test.resources (
                                          id                  BIGSERIAL PRIMARY KEY,
+                                         parent_resource_id BIGINT,
                                          resource_code       VARCHAR(256) NOT NULL UNIQUE,
                                          resource_type       VARCHAR(64) NOT NULL,
                                          resource_name       VARCHAR(256),
@@ -14,6 +15,9 @@ CREATE TABLE IF NOT EXISTS test.resources (
                                          create_time         BIGINT NOT NULL,
                                          update_time         BIGINT NOT NULL
 );
+
+CREATE INDEX IF NOT EXISTS idx_resources_parent_resource_id
+    ON test.resources (parent_resource_id);
 
 -- 2) Attribute model
 -- Purpose: Central dictionary of ABAC attribute keys and types.

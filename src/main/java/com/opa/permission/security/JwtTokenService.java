@@ -29,14 +29,17 @@ public class JwtTokenService {
     public Token createToken(PermissionUserDetails user) {
         Instant issuedAt = Instant.now();
         Instant expiresAt = issuedAt.plusSeconds(expirationSeconds);
-        JwtClaimsSet claims = JwtClaimsSet.builder()
+        JwtClaimsSet.Builder claimsBuilder = JwtClaimsSet.builder()
                 .issuer(ISSUER)
                 .issuedAt(issuedAt)
                 .expiresAt(expiresAt)
                 .subject(user.getUsername())
                 .claim("user_id", user.getUserId())
-                .claim("tenant_id", user.getTenantId())
-                .build();
+                .claim("tenant_id", user.getTenantId());
+        if (user.getGroupName() != null) {
+            claimsBuilder.claim("group_name", user.getGroupName());
+        }
+        JwtClaimsSet claims = claimsBuilder.build();
         JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).build();
         String encodedToken = jwtEncoder.encode(JwtEncoderParameters.from(header, claims)).getTokenValue();
         return new Token(encodedToken, expirationSeconds);

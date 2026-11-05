@@ -13,6 +13,7 @@ public class UserAccount {
     private String username;
     private String passwordHash;
     private Long tenantId;
+    private String groupName;
     private String status;
     private Long createdTime;
     private Long updatedTime;

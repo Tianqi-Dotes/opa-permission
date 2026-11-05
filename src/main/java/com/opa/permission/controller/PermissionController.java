@@ -53,7 +53,7 @@ public class PermissionController {
 
         List<UserSummary> users = userAccountService.listByTenantId(tenantId).stream()
                 .map(user -> new UserSummary(user.getUserId(), user.getUsername(),
-                        user.getTenantId(), user.getStatus()))
+                        user.getTenantId(), user.getGroupName(), user.getStatus()))
                 .toList();
         return ResponseEntity.ok(users);
     }
@@ -123,7 +123,7 @@ public class PermissionController {
     public record AssignRoleRequest(Long roleId) {
     }
 
-    public record UserSummary(Long userId, String username, Long tenantId, String status) {
+    public record UserSummary(Long userId, String username, Long tenantId, String groupName, String status) {
     }
 
     public record RoleAssignmentResponse(Long id, Long userId, Long roleId, Long tenantId, Long grantBy) {

@@ -6,13 +6,14 @@
         <result property="username" column="username"/>
         <result property="passwordHash" column="password_hash"/>
         <result property="tenantId" column="tenant_id"/>
+        <result property="groupName" column="group_name"/>
         <result property="status" column="status"/>
         <result property="createdTime" column="created_time"/>
         <result property="updatedTime" column="updated_time"/>
     </resultMap>
 
     <select id="selectByUsername" resultMap="UserAccountResultMap">
-        SELECT user_id, username, password_hash, tenant_id, status, created_time, updated_time
+        SELECT user_id, username, password_hash, tenant_id, group_name, status, created_time, updated_time
         FROM test.users
         WHERE username = #{username}
     </select>

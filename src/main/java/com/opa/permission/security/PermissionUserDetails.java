@@ -10,6 +10,7 @@ import java.util.List;
 public class PermissionUserDetails implements UserDetails {
     private final Long userId;
     private final Long tenantId;
+    private final String groupName;
     private final String username;
     private final String passwordHash;
     private final boolean enabled;
@@ -17,6 +18,7 @@ public class PermissionUserDetails implements UserDetails {
     public PermissionUserDetails(UserAccount userAccount) {
         this.userId = userAccount.getUserId();
         this.tenantId = userAccount.getTenantId();
+        this.groupName = userAccount.getGroupName();
         this.username = userAccount.getUsername();
         this.passwordHash = userAccount.getPasswordHash();
         this.enabled = "active".equalsIgnoreCase(userAccount.getStatus());
@@ -28,6 +30,10 @@ public class PermissionUserDetails implements UserDetails {
 
     public Long getTenantId() {
         return tenantId;
+    }
+
+    public String getGroupName() {
+        return groupName;
     }
 
     @Override

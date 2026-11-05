@@ -59,6 +59,7 @@ CREATE TABLE IF NOT EXISTS test.users (
     username                VARCHAR(128) NOT NULL UNIQUE,
     password_hash           VARCHAR(255) NOT NULL,
     tenant_id               BIGINT NOT NULL,
+    group_name              VARCHAR(256),
     status                  VARCHAR(32) NOT NULL DEFAULT 'active',
     created_time            BIGINT NOT NULL,
     updated_time            BIGINT NOT NULL
@@ -67,6 +68,7 @@ CREATE TABLE IF NOT EXISTS test.users (
 create table if not exists test.tenants (
     tenant_id               BIGINT PRIMARY KEY,
     tenant_name             VARCHAR(256) NOT NULL UNIQUE,
+    group_name                VARCHAR(256),
     status                  VARCHAR(32) NOT NULL DEFAULT 'active',
     created_time            BIGINT NOT NULL,
     updated_time            BIGINT NOT NULL
@@ -75,12 +77,14 @@ create table if not exists test.tenants (
 insert into test.tenants (
     tenant_id,
     tenant_name,
+    group_name,
     status,
     created_time,
     updated_time
 ) values (
     1,
     'dpaas',
+    'adgroup0001',
     'active',
     (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT,
     (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT

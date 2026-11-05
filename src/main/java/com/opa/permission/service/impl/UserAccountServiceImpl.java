@@ -21,7 +21,7 @@ public class UserAccountServiceImpl extends ServiceImpl<UserAccountMapper, UserA
     public List<UserAccount> listByTenantId(Long tenantId) {
         return baseMapper.selectList(new LambdaQueryWrapper<UserAccount>()
                 .select(UserAccount::getUserId, UserAccount::getUsername,
-                        UserAccount::getTenantId, UserAccount::getStatus)
+                        UserAccount::getTenantId, UserAccount::getGroupName, UserAccount::getStatus)
                 .eq(UserAccount::getTenantId, tenantId)
                 .orderByAsc(UserAccount::getUserId));
     }

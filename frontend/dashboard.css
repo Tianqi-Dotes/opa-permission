@@ -94,17 +94,32 @@ button {
     opacity: .82;
 }
 
-.workspace-label {
-    margin: 0 0 12px 12px;
+.main-nav {
+    display: grid;
+    min-height: 0;
+    flex: 1;
+    align-content: start;
+    gap: 17px;
+    overflow-y: auto;
+    padding: 0 2px 8px 0;
+}
+
+.nav-group {
+    display: grid;
+    gap: 5px;
+}
+
+.nav-group-heading {
+    margin: 0 0 3px 12px;
     color: #a1aabb;
     font-size: 9px;
     font-weight: 700;
     letter-spacing: 1.6px;
 }
 
-.main-nav {
+.nav-group-items {
     display: grid;
-    gap: 5px;
+    gap: 3px;
 }
 
 .nav-item {
@@ -404,6 +419,8 @@ button {
 
 .permission-test-panel[hidden],
 .assign-role-panel[hidden],
+.attribute-dictionary-panel[hidden],
+.attribute-form[hidden],
 .feature-card[hidden],
 .info-row[hidden] {
     display: none;
@@ -619,6 +636,178 @@ button {
     line-height: 1.6;
 }
 
+.attribute-dictionary-panel {
+    margin-top: 18px;
+    padding: 23px;
+    border: 1px solid #e9edf4;
+    border-radius: 13px;
+    background: #fff;
+    box-shadow: 0 5px 18px rgba(39, 60, 94, .035);
+}
+
+.attribute-dictionary-header,
+.attribute-toolbar,
+.attribute-form-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.attribute-dictionary-header h2,
+.attribute-form h3 {
+    margin: 0 0 6px;
+    color: #27354d;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.attribute-dictionary-header p {
+    margin: 0;
+    color: #8793a6;
+    font-size: 11px;
+    line-height: 1.7;
+}
+
+.attribute-toolbar {
+    justify-content: flex-end;
+}
+
+.attribute-toolbar .form-field {
+    min-width: 150px;
+}
+
+.form-field input,
+.form-field textarea {
+    width: 100%;
+    min-height: 37px;
+    padding: 9px 10px;
+    border: 1px solid #dfe5ef;
+    border-radius: 7px;
+    color: #40506a;
+    background: #fff;
+    font: inherit;
+    font-weight: 400;
+}
+
+.form-field textarea {
+    resize: vertical;
+}
+
+.form-field input:focus,
+.form-field select:focus,
+.form-field textarea:focus {
+    border-color: #9db4f2;
+    outline: 3px solid rgba(65, 110, 232, .12);
+}
+
+.attribute-form {
+    margin-top: 21px;
+    padding: 18px;
+    border: 1px solid #e8eef9;
+    border-radius: 9px;
+    background: #f9faff;
+}
+
+.attribute-form-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+    margin-top: 15px;
+}
+
+.attribute-checkbox-field {
+    display: flex;
+    align-items: center;
+    align-self: end;
+    gap: 8px;
+    min-height: 37px;
+    color: #64728a;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.attribute-checkbox-field input {
+    accent-color: #416ee8;
+}
+
+.attribute-description-field {
+    grid-column: 1 / -1;
+}
+
+.attribute-form-actions {
+    justify-content: flex-start;
+    margin-top: 15px;
+}
+
+.attribute-table-wrap {
+    overflow-x: auto;
+    margin-top: 20px;
+}
+
+.attribute-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
+
+.attribute-table th,
+.attribute-table td {
+    padding: 12px 10px;
+    border-bottom: 1px solid #edf0f5;
+    color: #596880;
+    font-size: 11px;
+    vertical-align: middle;
+}
+
+.attribute-table th {
+    color: #8995a7;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+}
+
+.attribute-table td:first-child {
+    color: #34445d;
+    font-weight: 600;
+}
+
+.attribute-table-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 7px;
+}
+
+.attribute-table-actions .secondary-button {
+    min-height: 30px;
+}
+
+.attribute-empty-state {
+    padding: 24px 10px !important;
+    color: #8995a7 !important;
+    font-weight: 400 !important;
+    text-align: center;
+}
+
+.attribute-status {
+    min-height: 17px;
+    margin: 14px 0 0;
+    color: #78869d;
+    font-size: 10px;
+    line-height: 1.6;
+}
+
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    clip-path: inset(50%);
+}
+
 .page-footer {
     margin-top: 55px;
     color: #a3adbb;
@@ -697,6 +886,33 @@ button {
 
     .permission-test-panel {
         padding: 18px;
+    }
+
+    .attribute-dictionary-panel {
+        padding: 18px;
+    }
+
+    .attribute-dictionary-header,
+    .attribute-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .attribute-toolbar .form-field {
+        min-width: 0;
+    }
+
+    .attribute-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .attribute-description-field {
+        grid-column: auto;
+    }
+
+    .attribute-table th,
+    .attribute-table td {
+        padding: 10px 8px;
     }
 
     .assign-role-panel {

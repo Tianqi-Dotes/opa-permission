@@ -1,5 +1,6 @@
 const pages = {
     "assign-roles": {
+        section: "RBAC",
         title: "Assign Roles",
         description: "Manage role assignments for users in your workspace.",
         featureTitle: "Role assignment",
@@ -7,6 +8,7 @@ const pages = {
         symbol: "AR"
     },
     "test-permissions": {
+        section: "RBAC",
         title: "Test Permissions",
         description: "Check whether a user is allowed to access a resource.",
         featureTitle: "Permission testing",
@@ -14,13 +16,63 @@ const pages = {
         symbol: "TP"
     },
     "assign-policy": {
+        section: "RBAC",
         title: "Assign Policy",
         description: "Manage policies and associate them with the appropriate identities.",
         featureTitle: "Policy assignment",
         featureDescription: "Policy assignment tools will be available here.",
         symbol: "AP"
     },
+    "attribute-dictionary": {
+        section: "ABAC",
+        title: "Attribute Dictionary",
+        description: "Define the attributes available to ABAC rules.",
+        featureTitle: "Attribute dictionary",
+        featureDescription: "Manage attribute names, categories, and data types used by the policy editor.",
+        symbol: "AD"
+    },
+    "subject-attributes": {
+        section: "ABAC",
+        title: "Subject Attributes",
+        description: "Manage attributes associated with users and other subjects.",
+        featureTitle: "Subject attributes",
+        featureDescription: "View and manage the attributes that ABAC policies evaluate for a subject.",
+        symbol: "SA"
+    },
+    "resource-attributes": {
+        section: "ABAC",
+        title: "Resource Attributes",
+        description: "Manage protected resources and their ABAC attributes.",
+        featureTitle: "Resource attributes",
+        featureDescription: "Register resources and define the attributes used to evaluate access.",
+        symbol: "RA"
+    },
+    "policy-config": {
+        section: "ABAC",
+        title: "Policy Config",
+        description: "Define ABAC rules and generate the single Rego configuration.",
+        featureTitle: "Policy configuration",
+        featureDescription: "Build allow and deny rules from the attribute dictionary, then generate Rego.",
+        symbol: "PC"
+    },
+    "playground": {
+        section: "ABAC",
+        title: "Playground",
+        description: "Evaluate sample requests against the current ABAC policy.",
+        featureTitle: "Policy playground",
+        featureDescription: "Provide subject, resource, action, and environment input to inspect a policy decision.",
+        symbol: "PG"
+    },
+    "publish-policy": {
+        section: "ABAC",
+        title: "Publish",
+        description: "Review and publish the generated ABAC configuration.",
+        featureTitle: "Publish policy",
+        featureDescription: "Review the generated Rego and validation results before making the configuration available.",
+        symbol: "PU"
+    },
     "query-trino": {
+        section: "Workspace",
         title: "Query Trino",
         description: "Run read-only queries against your connected Trino catalogs.",
         featureTitle: "Trino query",
@@ -28,6 +80,7 @@ const pages = {
         symbol: "QT"
     },
     "create-trino-table": {
+        section: "Workspace",
         title: "Create Trino Table",
         description: "Create and manage tables in your Trino data catalogs.",
         featureTitle: "Table management",
@@ -46,11 +99,14 @@ const sidebar = document.querySelector("#sidebar");
 const mobileMenuButton = document.querySelector("#mobile-menu-button");
 const logoutButton = document.querySelector("#logout-button");
 const pageTitle = document.querySelector("#page-title");
+const pageKicker = document.querySelector("#page-kicker");
+const breadcrumbSection = document.querySelector("#breadcrumb-section");
 const breadcrumbPage = document.querySelector("#breadcrumb-page");
 const pageDescription = document.querySelector("#page-description");
 const featureTitle = document.querySelector("#feature-title");
 const featureDescription = document.querySelector("#feature-description");
 const featureSymbol = document.querySelector("#feature-symbol");
+const featureSection = document.querySelector("#feature-section");
 const userName = document.querySelector("#user-name");
 const userAvatar = document.querySelector("#user-avatar");
 const featureCard = document.querySelector("#feature-card");
@@ -66,6 +122,21 @@ const permissionTestPanel = document.querySelector("#permission-test-panel");
 const permissionTestList = document.querySelector("#permission-test-list");
 const permissionTestSummary = document.querySelector("#permission-test-summary");
 const runAllPermissionTestsButton = document.querySelector("#run-all-permission-tests");
+const attributeDictionaryPanel = document.querySelector("#attribute-dictionary-panel");
+const attributeCategoryFilter = document.querySelector("#attribute-category-filter");
+const refreshAttributesButton = document.querySelector("#refresh-attributes");
+const newAttributeButton = document.querySelector("#new-attribute");
+const attributeForm = document.querySelector("#attribute-form");
+const attributeFormTitle = document.querySelector("#attribute-form-title");
+const attributeName = document.querySelector("#attribute-name");
+const attributeCategory = document.querySelector("#attribute-category");
+const attributeDataType = document.querySelector("#attribute-data-type");
+const attributeMultiValued = document.querySelector("#attribute-multi-valued");
+const attributeDescription = document.querySelector("#attribute-description");
+const saveAttributeButton = document.querySelector("#save-attribute");
+const cancelAttributeButton = document.querySelector("#cancel-attribute");
+const attributeRows = document.querySelector("#attribute-rows");
+const attributeStatus = document.querySelector("#attribute-status");
 
 const apiBaseUrl = (window.API_BASE_URL || "http://localhost:1111").replace(/\/+$/, "");
 const trinoPermissionTests = [
@@ -79,6 +150,9 @@ let permissionTestRunInProgress = false;
 let userListLoading = false;
 let roleAssignmentInProgress = false;
 let userListLoaded = false;
+let attributeListRequestId = 0;
+let attributeMutationInProgress = false;
+let editingAttributeId = null;
 
 function getTokenSubject(encodedToken) {
     try {
@@ -100,19 +174,27 @@ function showPage(pageKey) {
     }
 
     pageTitle.textContent = page.title;
+    pageKicker.textContent = page.section;
+    breadcrumbSection.textContent = page.section;
     breadcrumbPage.textContent = page.title;
     pageDescription.textContent = page.description;
     featureTitle.textContent = page.featureTitle;
     featureDescription.textContent = page.featureDescription;
     featureSymbol.textContent = page.symbol;
+    featureSection.textContent = page.section.toUpperCase();
     const isAssignRolesPage = pageKey === "assign-roles";
     const isPermissionTestPage = pageKey === "test-permissions";
-    featureCard.hidden = isAssignRolesPage || isPermissionTestPage;
-    infoRow.hidden = isAssignRolesPage || isPermissionTestPage;
+    const isAttributeDictionaryPage = pageKey === "attribute-dictionary";
+    featureCard.hidden = isAssignRolesPage || isPermissionTestPage || isAttributeDictionaryPage;
+    infoRow.hidden = isAssignRolesPage || isPermissionTestPage || isAttributeDictionaryPage;
     assignRolePanel.hidden = !isAssignRolesPage;
     permissionTestPanel.hidden = !isPermissionTestPage;
+    attributeDictionaryPanel.hidden = !isAttributeDictionaryPage;
     if (isAssignRolesPage) {
         loadUsers();
+    }
+    if (isAttributeDictionaryPage) {
+        loadAttributeDefinitions();
     }
 
     navItems.forEach((item) => {
@@ -143,6 +225,206 @@ async function getApiError(response) {
         return body.message || `Request failed with HTTP ${response.status}.`;
     } catch {
         return `Request failed with HTTP ${response.status}.`;
+    }
+}
+
+function formatAttributeLabel(value) {
+    return value ? value.charAt(0).toUpperCase() + value.slice(1) : "";
+}
+
+function renderAttributeDefinitions(definitions) {
+    attributeRows.replaceChildren();
+    if (definitions.length === 0) {
+        const emptyRow = document.createElement("tr");
+        const emptyCell = document.createElement("td");
+        emptyCell.className = "attribute-empty-state";
+        emptyCell.colSpan = 6;
+        emptyCell.textContent = "No attribute definitions found.";
+        emptyRow.append(emptyCell);
+        attributeRows.append(emptyRow);
+        return;
+    }
+
+    definitions.forEach((definition) => {
+        const row = document.createElement("tr");
+        const values = [
+            definition.name,
+            formatAttributeLabel(definition.category),
+            formatAttributeLabel(definition.dataType),
+            definition.multiValued ? "Yes" : "No",
+            definition.description || "—"
+        ];
+        values.forEach((value) => {
+            const cell = document.createElement("td");
+            cell.textContent = value == null ? "" : String(value);
+            row.append(cell);
+        });
+
+        const actionsCell = document.createElement("td");
+        const actions = document.createElement("div");
+        actions.className = "attribute-table-actions";
+        const editButton = document.createElement("button");
+        editButton.className = "secondary-button";
+        editButton.type = "button";
+        editButton.textContent = "Edit";
+        editButton.setAttribute("aria-label", `Edit ${definition.name}`);
+        editButton.addEventListener("click", () => openAttributeForm(definition));
+        const deleteButton = document.createElement("button");
+        deleteButton.className = "secondary-button";
+        deleteButton.type = "button";
+        deleteButton.textContent = "Delete";
+        deleteButton.setAttribute("aria-label", `Delete ${definition.name}`);
+        deleteButton.addEventListener("click", () => deleteAttribute(definition, deleteButton));
+        actions.append(editButton, deleteButton);
+        actionsCell.append(actions);
+        row.append(actionsCell);
+        attributeRows.append(row);
+    });
+}
+
+async function loadAttributeDefinitions() {
+    const requestId = ++attributeListRequestId;
+    const category = attributeCategoryFilter.value;
+    const query = category ? `?category=${encodeURIComponent(category)}` : "";
+    refreshAttributesButton.disabled = true;
+    attributeStatus.textContent = "Loading attribute definitions...";
+
+    try {
+        const response = await fetch(`${apiBaseUrl}/api/abac/attributes${query}`, {
+            headers: {Authorization: `Bearer ${token}`}
+        });
+        if (!response.ok) {
+            throw new Error(await getApiError(response));
+        }
+
+        const definitions = await response.json();
+        if (!Array.isArray(definitions)) {
+            throw new Error("The attribute definition response was not a list.");
+        }
+        if (requestId !== attributeListRequestId) {
+            return;
+        }
+
+        renderAttributeDefinitions(definitions);
+        attributeStatus.textContent = `Loaded ${definitions.length} attribute definition${definitions.length === 1 ? "" : "s"}.`;
+    } catch (error) {
+        if (requestId === attributeListRequestId) {
+            attributeRows.replaceChildren();
+            const errorRow = document.createElement("tr");
+            const errorCell = document.createElement("td");
+            errorCell.className = "attribute-empty-state";
+            errorCell.colSpan = 6;
+            errorCell.textContent = error.message || "Unable to load attribute definitions.";
+            errorRow.append(errorCell);
+            attributeRows.append(errorRow);
+            attributeStatus.textContent = error.message || "Unable to load attribute definitions.";
+        }
+    } finally {
+        if (requestId === attributeListRequestId) {
+            refreshAttributesButton.disabled = false;
+        }
+    }
+}
+
+function resetAttributeForm() {
+    editingAttributeId = null;
+    attributeForm.reset();
+    attributeForm.hidden = true;
+    attributeFormTitle.textContent = "Add attribute";
+    saveAttributeButton.textContent = "Save attribute";
+}
+
+function openAttributeForm(definition = null) {
+    if (attributeMutationInProgress) {
+        return;
+    }
+    editingAttributeId = definition ? definition.id : null;
+    attributeFormTitle.textContent = definition ? "Edit attribute" : "Add attribute";
+    saveAttributeButton.textContent = definition ? "Save changes" : "Save attribute";
+    attributeName.value = definition ? definition.name : "";
+    attributeCategory.value = definition ? definition.category : "subject";
+    attributeDataType.value = definition ? definition.dataType : "string";
+    attributeMultiValued.checked = definition ? Boolean(definition.multiValued) : false;
+    attributeDescription.value = definition && definition.description ? definition.description : "";
+    attributeForm.hidden = false;
+    attributeName.focus();
+}
+
+async function saveAttribute(event) {
+    event.preventDefault();
+    if (attributeMutationInProgress || !attributeForm.reportValidity()) {
+        return;
+    }
+
+    attributeMutationInProgress = true;
+    saveAttributeButton.disabled = true;
+    cancelAttributeButton.disabled = true;
+    const isEditing = editingAttributeId !== null;
+    const definition = {
+        name: attributeName.value.trim(),
+        category: attributeCategory.value,
+        dataType: attributeDataType.value,
+        multiValued: attributeMultiValued.checked,
+        description: attributeDescription.value.trim()
+    };
+
+    try {
+        const path = isEditing
+            ? `/api/abac/attributes/${encodeURIComponent(String(editingAttributeId))}`
+            : "/api/abac/attributes";
+        const response = await fetch(`${apiBaseUrl}${path}`, {
+            method: isEditing ? "PUT" : "POST",
+            headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(definition)
+        });
+        if (!response.ok) {
+            throw new Error(await getApiError(response));
+        }
+
+        attributeStatus.textContent = isEditing
+            ? "Attribute definition updated."
+            : "Attribute definition created.";
+        resetAttributeForm();
+        await loadAttributeDefinitions();
+    } catch (error) {
+        attributeStatus.textContent = error.message || "Unable to save the attribute definition.";
+    } finally {
+        attributeMutationInProgress = false;
+        saveAttributeButton.disabled = false;
+        cancelAttributeButton.disabled = false;
+    }
+}
+
+async function deleteAttribute(definition, button) {
+    if (attributeMutationInProgress
+            || !window.confirm(`Delete the "${definition.name}" attribute definition?`)) {
+        return;
+    }
+
+    attributeMutationInProgress = true;
+    button.disabled = true;
+    attributeStatus.textContent = `Deleting ${definition.name}...`;
+    try {
+        const response = await fetch(
+            `${apiBaseUrl}/api/abac/attributes/${encodeURIComponent(String(definition.id))}`,
+            {
+                method: "DELETE",
+                headers: {Authorization: `Bearer ${token}`}
+            }
+        );
+        if (!response.ok) {
+            throw new Error(await getApiError(response));
+        }
+        attributeStatus.textContent = `${definition.name} was deleted.`;
+        await loadAttributeDefinitions();
+    } catch (error) {
+        attributeStatus.textContent = error.message || "Unable to delete the attribute definition.";
+        button.disabled = false;
+    } finally {
+        attributeMutationInProgress = false;
     }
 }
 
@@ -355,6 +637,11 @@ refreshUsersButton.addEventListener("click", loadUsers);
 assignRoleForm.addEventListener("submit", assignSelectedRole);
 assignRoleUser.addEventListener("change", updateAssignRoleSubmitState);
 assignRoleRole.addEventListener("change", updateAssignRoleSubmitState);
+newAttributeButton.addEventListener("click", () => openAttributeForm());
+refreshAttributesButton.addEventListener("click", loadAttributeDefinitions);
+attributeCategoryFilter.addEventListener("change", loadAttributeDefinitions);
+attributeForm.addEventListener("submit", saveAttribute);
+cancelAttributeButton.addEventListener("click", resetAttributeForm);
 
 navItems.forEach((item) => {
     item.addEventListener("click", () => showPage(item.dataset.page));

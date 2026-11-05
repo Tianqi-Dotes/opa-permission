@@ -16,28 +16,68 @@
             <span>OPA<span class="brand-light">Permission</span></span>
         </a>
 
-        <div class="workspace-label">WORKSPACE</div>
         <nav class="main-nav" aria-label="Main menu">
-            <button class="nav-item active" type="button" data-page="assign-roles" aria-current="page">
-                <span class="nav-icon" aria-hidden="true">AR</span>
-                <span>Assign Roles</span>
-            </button>
-            <button class="nav-item" type="button" data-page="test-permissions">
-                <span class="nav-icon" aria-hidden="true">TP</span>
-                <span>Test Permissions</span>
-            </button>
-            <button class="nav-item" type="button" data-page="assign-policy">
-                <span class="nav-icon" aria-hidden="true">AP</span>
-                <span>Assign Policy</span>
-            </button>
-            <button class="nav-item" type="button" data-page="query-trino">
-                <span class="nav-icon" aria-hidden="true">QT</span>
-                <span>Query Trino</span>
-            </button>
-            <button class="nav-item" type="button" data-page="create-trino-table">
-                <span class="nav-icon" aria-hidden="true">CT</span>
-                <span>Create Trino Table</span>
-            </button>
+            <section class="nav-group" aria-labelledby="rbac-nav-heading">
+                <h2 class="nav-group-heading" id="rbac-nav-heading">RBAC</h2>
+                <div class="nav-group-items">
+                    <button class="nav-item active" type="button" data-page="assign-roles" aria-current="page">
+                        <span class="nav-icon" aria-hidden="true">AR</span>
+                        <span>Assign Roles</span>
+                    </button>
+                    <button class="nav-item" type="button" data-page="test-permissions">
+                        <span class="nav-icon" aria-hidden="true">TP</span>
+                        <span>Test Permissions</span>
+                    </button>
+                    <button class="nav-item" type="button" data-page="assign-policy">
+                        <span class="nav-icon" aria-hidden="true">AP</span>
+                        <span>Assign Policy</span>
+                    </button>
+                </div>
+            </section>
+
+            <section class="nav-group" aria-labelledby="abac-nav-heading">
+                <h2 class="nav-group-heading" id="abac-nav-heading">ABAC</h2>
+                <div class="nav-group-items">
+                    <button class="nav-item" type="button" data-page="attribute-dictionary">
+                        <span class="nav-icon" aria-hidden="true">AD</span>
+                        <span>Attribute Dictionary</span>
+                    </button>
+                    <button class="nav-item" type="button" data-page="subject-attributes">
+                        <span class="nav-icon" aria-hidden="true">SA</span>
+                        <span>Subject Attributes</span>
+                    </button>
+                    <button class="nav-item" type="button" data-page="resource-attributes">
+                        <span class="nav-icon" aria-hidden="true">RA</span>
+                        <span>Resource Attributes</span>
+                    </button>
+                    <button class="nav-item" type="button" data-page="policy-config">
+                        <span class="nav-icon" aria-hidden="true">PC</span>
+                        <span>Policy Config</span>
+                    </button>
+                    <button class="nav-item" type="button" data-page="playground">
+                        <span class="nav-icon" aria-hidden="true">PG</span>
+                        <span>Playground</span>
+                    </button>
+                    <button class="nav-item" type="button" data-page="publish-policy">
+                        <span class="nav-icon" aria-hidden="true">PU</span>
+                        <span>Publish</span>
+                    </button>
+                </div>
+            </section>
+
+            <section class="nav-group" aria-labelledby="workspace-nav-heading">
+                <h2 class="nav-group-heading" id="workspace-nav-heading">Workspace</h2>
+                <div class="nav-group-items">
+                    <button class="nav-item" type="button" data-page="query-trino">
+                        <span class="nav-icon" aria-hidden="true">QT</span>
+                        <span>Query Trino</span>
+                    </button>
+                    <button class="nav-item" type="button" data-page="create-trino-table">
+                        <span class="nav-icon" aria-hidden="true">CT</span>
+                        <span>Create Trino Table</span>
+                    </button>
+                </div>
+            </section>
         </nav>
 
         <div class="sidebar-bottom">
@@ -52,7 +92,7 @@
         <header class="topbar">
             <button class="mobile-menu-button" id="mobile-menu-button" type="button"
                     aria-label="Open navigation menu" aria-expanded="false">☰</button>
-            <div class="breadcrumb"><span>Workspace</span><span class="breadcrumb-separator">/</span>
+            <div class="breadcrumb"><span id="breadcrumb-section">RBAC</span><span class="breadcrumb-separator">/</span>
                 <strong id="breadcrumb-page">Assign Roles</strong></div>
             <div class="user-chip">
                 <span class="avatar" id="user-avatar">U</span>
@@ -62,7 +102,7 @@
 
         <section class="content-area" aria-live="polite">
             <div class="page-heading">
-                <span class="page-kicker">ACCESS MANAGEMENT</span>
+                <span class="page-kicker" id="page-kicker">RBAC</span>
                 <h1 id="page-title">Assign Roles</h1>
                 <p id="page-description">Manage role assignments for users in your workspace.</p>
             </div>
@@ -70,7 +110,7 @@
             <div class="feature-card" id="feature-card" hidden>
                 <div class="feature-symbol" id="feature-symbol" aria-hidden="true">AR</div>
                 <div class="feature-copy">
-                    <span class="feature-status"><span class="status-dot"></span> WORKSPACE</span>
+                    <span class="feature-status"><span class="status-dot"></span> <span id="feature-section">WORKSPACE</span></span>
                     <h2 id="feature-title">Role assignment</h2>
                     <p id="feature-description">
                         Select a workspace tool from the menu to get started. Feature forms will appear here.
@@ -128,9 +168,96 @@
                 </p>
             </div>
 
+            <section class="attribute-dictionary-panel" id="attribute-dictionary-panel" hidden
+                     aria-labelledby="attribute-dictionary-title">
+                <div class="attribute-dictionary-header">
+                    <div>
+                        <h2 id="attribute-dictionary-title">Attribute definitions</h2>
+                        <p>Create and manage the attributes available to ABAC rules.</p>
+                    </div>
+                    <div class="attribute-toolbar">
+                        <label class="form-field" for="attribute-category-filter">
+                            <span>Category</span>
+                            <select id="attribute-category-filter">
+                                <option value="">All categories</option>
+                                <option value="subject">Subject</option>
+                                <option value="resource">Resource</option>
+                                <option value="environment">Environment</option>
+                                <option value="action">Action</option>
+                            </select>
+                        </label>
+                        <button class="secondary-button" id="refresh-attributes" type="button">Refresh</button>
+                        <button class="primary-button" id="new-attribute" type="button">Add attribute</button>
+                    </div>
+                </div>
+
+                <form class="attribute-form" id="attribute-form" hidden>
+                    <h3 id="attribute-form-title">Add attribute</h3>
+                    <div class="attribute-form-grid">
+                        <label class="form-field">
+                            <span>Name</span>
+                            <input id="attribute-name" name="name" maxlength="128" required>
+                        </label>
+                        <label class="form-field">
+                            <span>Category</span>
+                            <select id="attribute-category" name="category" required>
+                                <option value="subject">Subject</option>
+                                <option value="resource">Resource</option>
+                                <option value="environment">Environment</option>
+                                <option value="action">Action</option>
+                            </select>
+                        </label>
+                        <label class="form-field">
+                            <span>Data type</span>
+                            <select id="attribute-data-type" name="dataType" required>
+                                <option value="string">String</option>
+                                <option value="number">Number</option>
+                                <option value="boolean">Boolean</option>
+                                <option value="date">Date</option>
+                                <option value="datetime">Date/time</option>
+                                <option value="json">JSON</option>
+                            </select>
+                        </label>
+                        <label class="attribute-checkbox-field">
+                            <input id="attribute-multi-valued" name="multiValued" type="checkbox">
+                            <span>Multiple values</span>
+                        </label>
+                        <label class="form-field attribute-description-field">
+                            <span>Description</span>
+                            <textarea id="attribute-description" name="description" rows="2"></textarea>
+                        </label>
+                    </div>
+                    <div class="attribute-form-actions">
+                        <button class="primary-button" id="save-attribute" type="submit">Save attribute</button>
+                        <button class="secondary-button" id="cancel-attribute" type="button">Cancel</button>
+                    </div>
+                </form>
+
+                <div class="attribute-table-wrap">
+                    <table class="attribute-table">
+                        <thead>
+                        <tr>
+                            <th scope="col">Name</th>
+                            <th scope="col">Category</th>
+                            <th scope="col">Type</th>
+                            <th scope="col">Multiple</th>
+                            <th scope="col">Description</th>
+                            <th scope="col"><span class="visually-hidden">Actions</span></th>
+                        </tr>
+                        </thead>
+                        <tbody id="attribute-rows">
+                        <tr><td class="attribute-empty-state" colspan="6">Load attributes to get started.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p class="attribute-status" id="attribute-status" role="status" aria-live="polite">
+                    Attribute definitions have not been loaded.
+                </p>
+            </section>
+
             <div class="info-row" id="info-row" hidden>
                 <span class="info-icon" aria-hidden="true">i</span>
-                <p>Access to each feature is controlled by your assigned roles and permissions.</p>
+                <p>Protected operations are evaluated by the active RBAC or ABAC policy.</p>
             </div>
             <footer class="page-footer">OPA Permission <span>·</span> Secure access management</footer>
         </section>

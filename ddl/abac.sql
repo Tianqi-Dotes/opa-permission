@@ -139,6 +139,19 @@ CREATE TABLE IF NOT EXISTS test.abac_actions (
         CHECK (status IN ('active', 'disabled'))
 );
 
+INSERT INTO test.abac_actions (action_code, action_name, status, create_time, update_time)
+VALUES (
+    'read',
+    'Read',
+    'active',
+    (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT,
+    (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT
+)
+ON CONFLICT (action_code) DO UPDATE SET
+    action_name = EXCLUDED.action_name,
+    status = EXCLUDED.status,
+    update_time = EXCLUDED.update_time;
+
 -- The single configuration record contains the generated Rego file.
 CREATE TABLE IF NOT EXISTS test.abac_policy_config (
     config_id               BIGINT PRIMARY KEY DEFAULT 1 CHECK (config_id = 1),
@@ -180,13 +193,7 @@ CREATE TABLE IF NOT EXISTS test.abac_policy_rules (
     condition_json      JSONB NOT NULL,
     description         TEXT,
     create_time         BIGINT NOT NULL,
-    update_time         BIGINT NOT NULL,
-    CONSTRAINT uq_abac_policy_rule_code
-        UNIQUE (config_id, rule_code),
-    CONSTRAINT ck_abac_policy_rule_effect
-        CHECK (effect IN ('allow', 'deny')),
-    CONSTRAINT ck_abac_policy_rule_condition
-        CHECK (jsonb_typeof(condition_json) = 'object')
+    update_time         BIGINT NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_abac_policy_rules_config_enabled_priority
@@ -204,11 +211,7 @@ CREATE TABLE IF NOT EXISTS test.abac_policy_test_cases (
     last_run_at         TIMESTAMPTZ,
     created_by          BIGINT,
     create_time         BIGINT NOT NULL,
-    update_time         BIGINT NOT NULL,
-    CONSTRAINT uq_abac_policy_test_case
-        UNIQUE (config_id, case_name),
-    CONSTRAINT ck_abac_policy_test_decision
-        CHECK (expected_decision IN ('allow', 'deny'))
+    update_time         BIGINT NOT NULL
 );
 
 -- Append-only administrative audit trail for policy edits and config generation.

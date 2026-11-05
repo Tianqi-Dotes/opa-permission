@@ -101,7 +101,12 @@ INSERT INTO test.permissions (
     (3, 'Create Trino Schema', '/api/trino/schemas', 'POST', 'active', 'Create a Trino schema', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
     (4, 'Create Trino Table', '/api/trino/tables', 'POST', 'active', 'Create a Trino table', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
     (5, 'List Users', '/api/permissions/users', 'GET', 'active', 'List users in the authenticated user tenant', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
-    (6, 'Assign User Role', '/api/permissions/users/*/roles', 'POST', 'active', 'Assign a role to a user in the authenticated user tenant', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT)
+    (6, 'Assign User Role', '/api/permissions/users/*/roles', 'POST', 'active', 'Assign a role to a user in the authenticated user tenant', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
+    (7, 'List ABAC Attributes', '/api/abac/attributes', 'GET', 'active', 'List ABAC attribute definitions', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
+    (8, 'Create ABAC Attribute', '/api/abac/attributes', 'POST', 'active', 'Create an ABAC attribute definition', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
+    (9, 'Read ABAC Attribute', '/api/abac/attributes/*', 'GET', 'active', 'Read an ABAC attribute definition', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
+    (10, 'Update ABAC Attribute', '/api/abac/attributes/*', 'PUT', 'active', 'Update an ABAC attribute definition', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
+    (11, 'Delete ABAC Attribute', '/api/abac/attributes/*', 'DELETE', 'active', 'Delete an ABAC attribute definition', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT)
 ON CONFLICT (permission_id) DO UPDATE SET
     permission_name = EXCLUDED.permission_name,
     resource_pattern = EXCLUDED.resource_pattern,

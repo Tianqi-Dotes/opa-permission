@@ -42,7 +42,12 @@ WITH missing_role_permissions AS (
                 'Create Trino Schema',
                 'Create Trino Table',
                 'List Users',
-                'Assign User Role'
+                'Assign User Role',
+                'List ABAC Attributes',
+                'Create ABAC Attribute',
+                'Read ABAC Attribute',
+                'Update ABAC Attribute',
+                'Delete ABAC Attribute'
             ))
        OR (r.role_name = 'ANALYST' AND p.permission_name = 'Query Trino')
        OR (r.role_name = 'DEVELOPER'

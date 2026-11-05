@@ -7,8 +7,6 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import lombok.Data;
 
-import java.time.OffsetDateTime;
-
 @Data
 @TableName(value = "resource_attribute_values", schema = "test", autoResultMap = true)
 public class ResourceAttributeValue {
@@ -17,10 +15,8 @@ public class ResourceAttributeValue {
     private Long resourceId;
     private Long attributeId;
     private String valueText;
-//    @TableField(typeHandler = JacksonTypeHandler.class)
-//    private Object valueJson;//for multi-value attributes, store as JSON array
-//    private OffsetDateTime validFrom;
-//    private OffsetDateTime validTo;
+    @TableField(typeHandler = JacksonTypeHandler.class)
+    private Object valueJson;
     private Long createTime;
     private Long updateTime;
 }

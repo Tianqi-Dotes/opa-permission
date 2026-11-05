@@ -2,6 +2,7 @@ package com.opa.permission.controller;
 
 import com.opa.permission.service.TrinoQueryException;
 import com.opa.permission.service.TrinoQueryValidationException;
+import com.opa.permission.service.DefaultAttributeInjectionException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -18,6 +19,14 @@ public class ApiExceptionHandler {
     public ResponseEntity<ApiError> handleTrinoQueryFailure() {
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
                 .body(new ApiError("Trino query execution failed"));
+    }
+
+    @ExceptionHandler(DefaultAttributeInjectionException.class)
+    public ResponseEntity<ApiError> handleDefaultAttributeInjectionFailure(
+            DefaultAttributeInjectionException exception) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ApiError("The operation succeeded, but default attribute injection failed: "
+                        + exception.getMessage()));
     }
 
     public record ApiError(String message) {

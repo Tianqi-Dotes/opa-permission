@@ -14,14 +14,20 @@ public class PermissionUserDetails implements UserDetails {
     private final String username;
     private final String passwordHash;
     private final boolean enabled;
+    private final List<String> roles;
 
     public PermissionUserDetails(UserAccount userAccount) {
+        this(userAccount, List.of());
+    }
+
+    public PermissionUserDetails(UserAccount userAccount, List<String> roles) {
         this.userId = userAccount.getUserId();
         this.tenantId = userAccount.getTenantId();
         this.groupName = userAccount.getGroupName();
         this.username = userAccount.getUsername();
         this.passwordHash = userAccount.getPasswordHash();
         this.enabled = "active".equalsIgnoreCase(userAccount.getStatus());
+        this.roles = List.copyOf(roles);
     }
 
     public Long getUserId() {
@@ -34,6 +40,10 @@ public class PermissionUserDetails implements UserDetails {
 
     public String getGroupName() {
         return groupName;
+    }
+
+    public List<String> getRoles() {
+        return roles;
     }
 
     @Override

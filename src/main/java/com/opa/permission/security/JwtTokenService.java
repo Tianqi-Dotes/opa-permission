@@ -39,6 +39,9 @@ public class JwtTokenService {
         if (user.getGroupName() != null) {
             claimsBuilder.claim("group_name", user.getGroupName());
         }
+        if (!user.getRoles().isEmpty()) {
+            claimsBuilder.claim("roles", user.getRoles());
+        }
         JwtClaimsSet claims = claimsBuilder.build();
         JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).build();
         String encodedToken = jwtEncoder.encode(JwtEncoderParameters.from(header, claims)).getTokenValue();

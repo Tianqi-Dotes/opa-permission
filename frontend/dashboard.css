@@ -732,15 +732,54 @@ button {
     line-height: 1.7;
 }
 
-.attribute-template-empty {
-    margin-top: 16px;
-    padding: 20px 14px;
-    border: 1px dashed #dfe5ef;
-    border-radius: 8px;
+.template-list-toolbar {
+    justify-content: flex-end;
+    margin-top: 14px;
+}
+
+.attribute-template-detail {
+    margin-top: 20px;
+    padding: 16px;
+    border: 1px solid #e8edf5;
+    border-radius: 9px;
+    background: #fbfcfe;
+}
+
+.attribute-template-detail-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.attribute-template-detail-header h4 {
+    margin: 0;
+    color: #34445d;
+    font-size: 12px;
+}
+
+.attribute-template-detail-grid {
+    display: grid;
+    grid-template-columns: minmax(110px, .35fr) minmax(0, 1fr);
+    gap: 9px 16px;
+    margin: 14px 0 0;
+    font-size: 11px;
+}
+
+.attribute-template-detail-grid dt {
     color: #8995a7;
-    background: #fafbfe;
-    font-size: 10px;
-    text-align: center;
+    font-weight: 600;
+}
+
+.attribute-template-detail-grid dd {
+    min-width: 0;
+    margin: 0;
+    color: #596880;
+    overflow-wrap: anywhere;
+}
+
+.attribute-template-detail-grid dd.is-multiline {
+    white-space: pre-wrap;
 }
 
 .resource-scope-tabs {
@@ -1031,6 +1070,19 @@ button {
     .attribute-table th,
     .attribute-table td {
         padding: 10px 8px;
+    }
+
+    .attribute-template-detail {
+        padding: 13px;
+    }
+
+    .attribute-template-detail-grid {
+        grid-template-columns: 1fr;
+        gap: 5px;
+    }
+
+    .attribute-template-detail-grid dd {
+        margin-bottom: 7px;
     }
 
     .assign-role-panel,

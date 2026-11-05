@@ -269,7 +269,7 @@
                 <div class="attribute-dictionary-header">
                     <div>
                         <h2 id="attribute-template-title">Attribute Templates</h2>
-                        <p>Manage platform defaults and tenant-specific attribute overrides.</p>
+                        <p>Browse project and tenant default attribute injection rules.</p>
                     </div>
                 </div>
                 <div class="attribute-template-tabs" role="tablist" aria-label="Attribute template scope">
@@ -285,18 +285,84 @@
                 <div class="attribute-template-content" id="default-template-panel" role="tabpanel"
                      aria-labelledby="default-template-tab">
                     <h3>Platform default template</h3>
-                    <p>Defaults apply across tenants unless overridden by a tenant or an individual subject/resource.</p>
-                    <div class="attribute-template-empty">
-                        Default template values are not connected to a backend API yet.
+                    <p>Project defaults that can be injected for matching permissions across tenants.</p>
+                    <div class="attribute-toolbar template-list-toolbar">
+                        <button class="secondary-button" id="refresh-default-templates" type="button">Refresh defaults</button>
                     </div>
+                    <div class="attribute-table-wrap">
+                        <table class="attribute-table">
+                            <thead>
+                            <tr>
+                                <th scope="col">ID</th>
+                                <th scope="col">Permission path</th>
+                                <th scope="col">Target</th>
+                                <th scope="col">Attribute ID</th>
+                                <th scope="col">Default value</th>
+                                <th scope="col">Inject</th>
+                                <th scope="col"><span class="visually-hidden">Actions</span></th>
+                            </tr>
+                            </thead>
+                            <tbody id="default-template-rows">
+                            <tr><td class="attribute-empty-state" colspan="7">Load default templates to get started.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="attribute-status" id="default-template-status" role="status" aria-live="polite">
+                        Default templates have not been loaded.
+                    </p>
+                    <section class="attribute-template-detail" id="default-template-detail" hidden
+                             aria-labelledby="default-template-detail-title">
+                        <div class="attribute-template-detail-header">
+                            <h4 id="default-template-detail-title">Template details</h4>
+                            <button class="secondary-button" id="close-default-template-detail" type="button">
+                                Close details
+                            </button>
+                        </div>
+                        <p class="attribute-status" id="default-template-detail-status" role="status"
+                           aria-live="polite"></p>
+                        <dl class="attribute-template-detail-grid" id="default-template-detail-fields"></dl>
+                    </section>
                 </div>
                 <div class="attribute-template-content" id="tenant-template-panel" role="tabpanel"
                      aria-labelledby="tenant-template-tab" hidden>
                     <h3>Tenant template</h3>
-                    <p>Tenant-specific defaults override platform defaults for that tenant.</p>
-                    <div class="attribute-template-empty">
-                        Tenant template values are not connected to a backend API yet.
+                    <p>Tenant-scoped defaults configured for matching permissions.</p>
+                    <div class="attribute-toolbar template-list-toolbar">
+                        <button class="secondary-button" id="refresh-tenant-templates" type="button">Refresh tenant templates</button>
                     </div>
+                    <div class="attribute-table-wrap">
+                        <table class="attribute-table">
+                            <thead>
+                            <tr>
+                                <th scope="col">ID</th>
+                                <th scope="col">Permission path</th>
+                                <th scope="col">Target</th>
+                                <th scope="col">Attribute ID</th>
+                                <th scope="col">Default value</th>
+                                <th scope="col">Inject</th>
+                                <th scope="col"><span class="visually-hidden">Actions</span></th>
+                            </tr>
+                            </thead>
+                            <tbody id="tenant-template-rows">
+                            <tr><td class="attribute-empty-state" colspan="7">Load tenant templates to get started.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="attribute-status" id="tenant-template-status" role="status" aria-live="polite">
+                        Tenant templates have not been loaded.
+                    </p>
+                    <section class="attribute-template-detail" id="tenant-template-detail" hidden
+                             aria-labelledby="tenant-template-detail-title">
+                        <div class="attribute-template-detail-header">
+                            <h4 id="tenant-template-detail-title">Template details</h4>
+                            <button class="secondary-button" id="close-tenant-template-detail" type="button">
+                                Close details
+                            </button>
+                        </div>
+                        <p class="attribute-status" id="tenant-template-detail-status" role="status"
+                           aria-live="polite"></p>
+                        <dl class="attribute-template-detail-grid" id="tenant-template-detail-fields"></dl>
+                    </section>
                 </div>
             </section>
 

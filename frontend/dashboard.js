@@ -158,6 +158,28 @@ const defaultTemplateTab = document.querySelector("#default-template-tab");
 const tenantTemplateTab = document.querySelector("#tenant-template-tab");
 const defaultTemplatePanel = document.querySelector("#default-template-panel");
 const tenantTemplatePanel = document.querySelector("#tenant-template-panel");
+const attributeTemplateViews = {
+    default: {
+        fromType: "project",
+        rows: document.querySelector("#default-template-rows"),
+        status: document.querySelector("#default-template-status"),
+        refreshButton: document.querySelector("#refresh-default-templates"),
+        detail: document.querySelector("#default-template-detail"),
+        detailStatus: document.querySelector("#default-template-detail-status"),
+        detailFields: document.querySelector("#default-template-detail-fields"),
+        closeDetailButton: document.querySelector("#close-default-template-detail")
+    },
+    tenant: {
+        fromType: "tenant",
+        rows: document.querySelector("#tenant-template-rows"),
+        status: document.querySelector("#tenant-template-status"),
+        refreshButton: document.querySelector("#refresh-tenant-templates"),
+        detail: document.querySelector("#tenant-template-detail"),
+        detailStatus: document.querySelector("#tenant-template-detail-status"),
+        detailFields: document.querySelector("#tenant-template-detail-fields"),
+        closeDetailButton: document.querySelector("#close-tenant-template-detail")
+    }
+};
 const resourceAttributesPanel = document.querySelector("#resource-attributes-panel");
 const internalResourceTab = document.querySelector("#internal-resource-tab");
 const externalResourceTab = document.querySelector("#external-resource-tab");
@@ -204,6 +226,9 @@ let userListLoaded = false;
 let attributeListRequestId = 0;
 let attributeMutationInProgress = false;
 let editingAttributeId = null;
+let activeAttributeTemplateScope = "default";
+const attributeTemplateListRequestIds = {default: 0, tenant: 0};
+const attributeTemplateDetailRequestIds = {default: 0, tenant: 0};
 let bucketCreationInProgress = false;
 let resourceAttributeDefinitions = [];
 let resourceAttributeListRequestId = 0;
@@ -236,6 +261,8 @@ function activateAttributeTemplateTab(selectedTab, shouldFocus = false) {
     tenantTemplateTab.setAttribute("aria-selected", String(!isDefaultTemplate));
     tenantTemplateTab.tabIndex = isDefaultTemplate ? -1 : 0;
     tenantTemplatePanel.hidden = isDefaultTemplate;
+    activeAttributeTemplateScope = isDefaultTemplate ? "default" : "tenant";
+    loadAttributeTemplateList(activeAttributeTemplateScope);
     if (shouldFocus) {
         selectedTab.focus();
     }
@@ -296,6 +323,9 @@ function showPage(pageKey) {
     }
     if (isAttributeDictionaryPage) {
         loadAttributeDefinitions();
+    }
+    if (isAttributeTemplatesPage) {
+        loadAttributeTemplateList(activeAttributeTemplateScope);
     }
     if (isResourceAttributesPage) {
         loadResourceAttributes();
@@ -375,6 +405,200 @@ async function createBucket(event) {
 
 function formatAttributeLabel(value) {
     return value ? value.charAt(0).toUpperCase() + value.slice(1) : "";
+}
+
+function formatAttributeTemplateValue(write) {
+    if (write.defaultValueText != null) {
+        return write.defaultValueText;
+    }
+    if (write.defaultValueJson != null) {
+        try {
+            return JSON.stringify(write.defaultValueJson);
+        } catch {
+            return String(write.defaultValueJson);
+        }
+    }
+    return "—";
+}
+
+function formatPermissionPath(template) {
+    const path = template.permissionPath || "Permission path unavailable";
+    return template.httpMethod ? `${template.httpMethod} ${path}` : path;
+}
+
+function setAttributeTemplateRowsMessage(scope, message) {
+    const view = attributeTemplateViews[scope];
+    view.rows.replaceChildren();
+    const row = document.createElement("tr");
+    const cell = document.createElement("td");
+    cell.className = "attribute-empty-state";
+    cell.colSpan = 7;
+    cell.textContent = message;
+    row.append(cell);
+    view.rows.append(row);
+}
+
+function renderAttributeTemplateList(scope, templates) {
+    const view = attributeTemplateViews[scope];
+    view.rows.replaceChildren();
+    if (templates.length === 0) {
+        setAttributeTemplateRowsMessage(scope, "No templates found.");
+        return;
+    }
+
+    templates.forEach((template) => {
+        const row = document.createElement("tr");
+        [
+            template.id,
+            formatPermissionPath(template),
+            formatAttributeLabel(template.targetType),
+            template.attributeId,
+            formatAttributeTemplateValue(template),
+            template.shouldInject ? "Yes" : "No"
+        ].forEach((value) => {
+            const cell = document.createElement("td");
+            cell.textContent = value == null ? "" : String(value);
+            row.append(cell);
+        });
+
+        const actionsCell = document.createElement("td");
+        const actions = document.createElement("div");
+        actions.className = "attribute-table-actions";
+        const detailButton = document.createElement("button");
+        detailButton.className = "secondary-button";
+        detailButton.type = "button";
+        detailButton.textContent = "Details";
+        detailButton.setAttribute("aria-label", `View template ${template.id}`);
+        detailButton.addEventListener("click", () => loadAttributeTemplateDetail(scope, template.id));
+        actions.append(detailButton);
+        actionsCell.append(actions);
+        row.append(actionsCell);
+        view.rows.append(row);
+    });
+}
+
+async function loadAttributeTemplateList(scope) {
+    const view = attributeTemplateViews[scope];
+    const requestId = ++attributeTemplateListRequestIds[scope];
+    view.refreshButton.disabled = true;
+    view.status.textContent = `Loading ${scope === "default" ? "default" : "tenant"} templates...`;
+
+    try {
+        const query = new URLSearchParams({fromType: view.fromType});
+        const response = await fetch(
+            `${apiBaseUrl}/api/abac/permission-default-attribute-writes?${query.toString()}`,
+            {headers: {Authorization: `Bearer ${token}`}}
+        );
+        if (!response.ok) {
+            throw new Error(await getApiError(response));
+        }
+
+        const templates = await response.json();
+        if (!Array.isArray(templates)) {
+            throw new Error("The attribute template response was not a list.");
+        }
+        if (requestId !== attributeTemplateListRequestIds[scope]) {
+            return;
+        }
+
+        renderAttributeTemplateList(scope, templates);
+        view.status.textContent =
+            `Loaded ${templates.length} ${scope === "default" ? "default" : "tenant"} template${templates.length === 1 ? "" : "s"}.`;
+    } catch (error) {
+        if (requestId === attributeTemplateListRequestIds[scope]) {
+            setAttributeTemplateRowsMessage(scope, error.message || "Unable to load templates.");
+            view.status.textContent = error.message || "Unable to load templates.";
+        }
+    } finally {
+        if (requestId === attributeTemplateListRequestIds[scope]) {
+            view.refreshButton.disabled = false;
+        }
+    }
+}
+
+function formatTemplateTimestamp(value) {
+    if (value == null) {
+        return "—";
+    }
+    const timestamp = Number(value);
+    if (!Number.isFinite(timestamp)) {
+        return String(value);
+    }
+    const date = new Date(timestamp);
+    return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString();
+}
+
+function appendAttributeTemplateDetailField(container, label, value, isMultiline = false) {
+    const term = document.createElement("dt");
+    term.textContent = label;
+    const description = document.createElement("dd");
+    description.textContent = value == null || value === "" ? "—" : String(value);
+    if (isMultiline) {
+        description.classList.add("is-multiline");
+    }
+    container.append(term, description);
+}
+
+function renderAttributeTemplateDetail(scope, template) {
+    const fields = attributeTemplateViews[scope].detailFields;
+    fields.replaceChildren();
+    appendAttributeTemplateDetailField(fields, "ID", template.id);
+    appendAttributeTemplateDetailField(fields, "Permission ID", template.permissionId);
+    appendAttributeTemplateDetailField(fields, "Permission path", template.permissionPath);
+    appendAttributeTemplateDetailField(fields, "HTTP method", template.httpMethod);
+    appendAttributeTemplateDetailField(fields, "Source", formatAttributeLabel(template.fromType));
+    appendAttributeTemplateDetailField(fields, "Target", formatAttributeLabel(template.targetType));
+    appendAttributeTemplateDetailField(fields, "Attribute ID", template.attributeId);
+    appendAttributeTemplateDetailField(fields, "Default value text", template.defaultValueText, true);
+    let jsonValue = "—";
+    if (template.defaultValueJson != null) {
+        try {
+            jsonValue = JSON.stringify(template.defaultValueJson, null, 2);
+        } catch {
+            jsonValue = String(template.defaultValueJson);
+        }
+    }
+    appendAttributeTemplateDetailField(fields, "Default value JSON", jsonValue, true);
+    appendAttributeTemplateDetailField(fields, "Should inject", template.shouldInject ? "Yes" : "No");
+    appendAttributeTemplateDetailField(fields, "Created", formatTemplateTimestamp(template.createTime));
+    appendAttributeTemplateDetailField(fields, "Updated", formatTemplateTimestamp(template.updateTime));
+}
+
+async function loadAttributeTemplateDetail(scope, id) {
+    const view = attributeTemplateViews[scope];
+    const requestId = ++attributeTemplateDetailRequestIds[scope];
+    view.detail.hidden = false;
+    view.detailStatus.textContent = "Loading template details...";
+    view.detailFields.replaceChildren();
+
+    try {
+        const response = await fetch(
+            `${apiBaseUrl}/api/abac/permission-default-attribute-writes/${encodeURIComponent(String(id))}`,
+            {headers: {Authorization: `Bearer ${token}`}}
+        );
+        if (!response.ok) {
+            throw new Error(await getApiError(response));
+        }
+
+        const template = await response.json();
+        if (requestId !== attributeTemplateDetailRequestIds[scope]) {
+            return;
+        }
+        renderAttributeTemplateDetail(scope, template);
+        view.detailStatus.textContent = `Details for template ${template.id} loaded.`;
+    } catch (error) {
+        if (requestId === attributeTemplateDetailRequestIds[scope]) {
+            view.detailStatus.textContent = error.message || "Unable to load template details.";
+        }
+    }
+}
+
+function closeAttributeTemplateDetail(scope) {
+    const view = attributeTemplateViews[scope];
+    attributeTemplateDetailRequestIds[scope] += 1;
+    view.detail.hidden = true;
+    view.detailFields.replaceChildren();
+    view.detailStatus.textContent = "";
 }
 
 function renderAttributeDefinitions(definitions) {
@@ -1170,6 +1394,14 @@ attributeForm.addEventListener("submit", saveAttribute);
 cancelAttributeButton.addEventListener("click", resetAttributeForm);
 defaultTemplateTab.addEventListener("click", () => activateAttributeTemplateTab(defaultTemplateTab));
 tenantTemplateTab.addEventListener("click", () => activateAttributeTemplateTab(tenantTemplateTab));
+attributeTemplateViews.default.refreshButton.addEventListener(
+    "click", () => loadAttributeTemplateList("default"));
+attributeTemplateViews.tenant.refreshButton.addEventListener(
+    "click", () => loadAttributeTemplateList("tenant"));
+attributeTemplateViews.default.closeDetailButton.addEventListener(
+    "click", () => closeAttributeTemplateDetail("default"));
+attributeTemplateViews.tenant.closeDetailButton.addEventListener(
+    "click", () => closeAttributeTemplateDetail("tenant"));
 [defaultTemplateTab, tenantTemplateTab].forEach((tab) => {
     tab.addEventListener("keydown", (event) => {
         if (event.key === "ArrowLeft" || event.key === "ArrowRight"

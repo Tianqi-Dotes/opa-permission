@@ -1,0 +1,16 @@
+services:
+  opa:
+    image: openpolicyagent/opa:latest
+    ports:
+      - "8181:8181"
+    mem_limit: 256m
+    cpus: 0.25
+    command:
+      - run
+      - --server
+      - --addr=0.0.0.0:8181
+      - --set=services.github.url=https://raw.githubusercontent.com
+      - --set=bundles.authorization.service=github
+      - --set=bundles.authorization.resource=${OPA_GITHUB_BUNDLE_PATH:?Set OPA_GITHUB_BUNDLE_PATH to owner/repo/branch/path/to/bundle.tar.gz}
+      - --set=bundles.authorization.polling.min_delay_seconds=60
+      - --set=bundles.authorization.polling.max_delay_seconds=120

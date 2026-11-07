@@ -3,6 +3,7 @@ package com.opa.permission.service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 
 import java.sql.Connection;
@@ -56,9 +57,9 @@ public class TrinoQueryService {
         this.timeoutSeconds = timeoutSeconds;
     }
 
-    public QueryResult executeReadOnlyQuery(String sql, String accessToken) {
+    public QueryResult executeReadOnlyQuery(String sql, Jwt jwt) {
         String query = validateAndNormalize(sql);
-        Properties properties = connectionProperties(accessToken);
+        Properties properties = connectionProperties(jwt);
 
         try (Connection connection = DriverManager.getConnection(jdbcUrl, properties);
              Statement statement = connection.createStatement()) {
@@ -77,16 +78,41 @@ public class TrinoQueryService {
         }
     }
 
+    public SqlExecutionResult executeSql(String sql, Jwt jwt) {
+        String query = normalizeSql(sql);
+        Properties properties = connectionProperties(jwt);
+
+        try (Connection connection = DriverManager.getConnection(jdbcUrl, properties);
+             Statement statement = connection.createStatement()) {
+            statement.setQueryTimeout(timeoutSeconds);
+            statement.setMaxRows(maxRows + 1);
+            if (statement.execute(query)) {
+                try (ResultSet resultSet = statement.getResultSet()) {
+                    QueryResult result = readResult(resultSet);
+                    return new SqlExecutionResult(true, result.columns(), result.rows(),
+                            result.truncated(), null);
+                }
+            }
+
+            long updateCount = statement.getLargeUpdateCount();
+            return new SqlExecutionResult(false, List.of(), List.of(), false,
+                    updateCount >= 0 ? updateCount : null);
+        } catch (SQLException exception) {
+            log.error("Trino SQL execution failed (SQLState: {})", exception.getSQLState());
+            throw new TrinoQueryException("Trino SQL execution failed", exception);
+        }
+    }
+
     public void createCatalog(String catalogName, String connectorName,
-                              Map<String, String> properties, String accessToken) {
+                              Map<String, String> properties, Jwt jwt) {
         String catalog = quoteIdentifier(catalogName, "catalogName");
         String connector = quoteIdentifier(connectorName, "connectorName");
         String sql = "CREATE CATALOG " + catalog + " USING " + connector + renderProperties(properties);
-        executeDdl(sql, accessToken);
+        executeDdl(sql, jwt);
     }
 
     public void createSchema(String catalogName, String schemaName, String location,
-                             boolean ifNotExists, String accessToken) {
+                             boolean ifNotExists, Jwt jwt) {
         String qualifiedName = quoteIdentifier(catalogName, "catalogName")
                 + "." + quoteIdentifier(schemaName, "schemaName");
         String sql = "CREATE SCHEMA " + (ifNotExists ? "IF NOT EXISTS " : "")
@@ -94,12 +120,12 @@ public class TrinoQueryService {
         if (location != null && !location.isBlank()) {
             sql += " WITH (location = " + quoteLiteral(location) + ")";
         }
-        executeDdl(sql, accessToken);
+        executeDdl(sql, jwt);
     }
 
     public void createTable(String catalogName, String schemaName, String tableName,
                             List<ColumnDefinition> columns, Map<String, String> properties,
-                            boolean ifNotExists, String accessToken) {
+                            boolean ifNotExists, Jwt jwt) {
         String qualifiedName = quoteIdentifier(catalogName, "catalogName")
                 + "." + quoteIdentifier(schemaName, "schemaName")
                 + "." + quoteIdentifier(tableName, "tableName");
@@ -125,11 +151,11 @@ public class TrinoQueryService {
         String sql = "CREATE TABLE " + (ifNotExists ? "IF NOT EXISTS " : "")
                 + qualifiedName + " (" + String.join(", ", columnDefinitions) + ")"
                 + renderProperties(properties);
-        executeDdl(sql, accessToken);
+        executeDdl(sql, jwt);
     }
 
-    private void executeDdl(String sql, String accessToken) {
-        Properties properties = connectionProperties(accessToken);
+    private void executeDdl(String sql, Jwt jwt) {
+        Properties properties = connectionProperties(jwt);
         try (Connection connection = DriverManager.getConnection(jdbcUrl, properties);
              Statement statement = connection.createStatement()) {
             statement.setQueryTimeout(timeoutSeconds);
@@ -140,12 +166,13 @@ public class TrinoQueryService {
         }
     }
 
-    private Properties connectionProperties(String accessToken) {
-        if (accessToken == null || accessToken.isBlank()) {
+    private Properties connectionProperties(Jwt jwt) {
+        if (jwt == null || jwt.getTokenValue().isBlank()) {
             throw new TrinoQueryValidationException("A valid bearer token is required");
         }
         Properties properties = new Properties();
-        properties.setProperty("accessToken", accessToken);
+        properties.setProperty("accessToken", jwt.getTokenValue());
+        properties.setProperty("extraCredentials", "jwt:" + jwt.getTokenValue());
         return properties;
     }
 
@@ -215,6 +242,20 @@ public class TrinoQueryService {
         return query;
     }
 
+    private String normalizeSql(String sql) {
+        if (sql == null || sql.isBlank()) {
+            throw new TrinoQueryValidationException("sql is required");
+        }
+        String query = sql.trim();
+        if (query.endsWith(";")) {
+            query = query.substring(0, query.length() - 1).trim();
+        }
+        if (query.isEmpty()) {
+            throw new TrinoQueryValidationException("sql is required");
+        }
+        return query;
+    }
+
     private QueryResult readResult(ResultSet resultSet) throws SQLException {
         ResultSetMetaData metadata = resultSet.getMetaData();
         int columnCount = metadata.getColumnCount();
@@ -240,6 +281,10 @@ public class TrinoQueryService {
     }
 
     public record QueryResult(List<String> columns, List<List<Object>> rows, boolean truncated) {
+    }
+
+    public record SqlExecutionResult(boolean hasResultSet, List<String> columns, List<List<Object>> rows,
+                                     boolean truncated, Long updateCount) {
     }
 
     public record ColumnDefinition(String name, String type) {

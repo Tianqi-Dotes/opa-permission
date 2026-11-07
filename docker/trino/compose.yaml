@@ -8,6 +8,7 @@ services:
       TRINO_INTERNAL_SHARED_SECRET: ${TRINO_INTERNAL_SHARED_SECRET:?Set it in docker/trino/.env}
     volumes:
       - ./etc/config.properties:/etc/trino/config.properties:ro
+      - ./etc/access-control.properties:/etc/trino/access-control.properties:ro
       - ./jwt-key:/etc/trino/jwt-key:ro
       - trino-data:/data/trino
     restart: unless-stopped

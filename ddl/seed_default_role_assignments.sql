@@ -38,6 +38,7 @@ WITH missing_role_permissions AS (
            (r.role_name = 'ADMIN'
             AND p.permission_name IN (
                 'Query Trino',
+                'Execute Trino SQL',
                 'Create Trino Catalog',
                 'Create Trino Schema',
                 'Create Trino Table',

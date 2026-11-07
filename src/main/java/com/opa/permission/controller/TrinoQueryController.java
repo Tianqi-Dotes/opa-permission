@@ -3,6 +3,7 @@ package com.opa.permission.controller;
 import com.opa.permission.service.TrinoQueryService;
 import com.opa.permission.service.TrinoQueryValidationException;
 import com.opa.permission.service.TrinoQueryService.QueryResult;
+import com.opa.permission.service.TrinoQueryService.SqlExecutionResult;
 import com.opa.permission.service.TrinoQueryService.ColumnDefinition;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -32,7 +33,16 @@ public class TrinoQueryController {
         if (request == null || !StringUtils.hasText(request.sql())) {
             throw new TrinoQueryValidationException("sql is required");
         }
-        return trinoQueryService.executeReadOnlyQuery(request.sql(), requireToken(jwt));
+        return trinoQueryService.executeReadOnlyQuery(request.sql(), requireJwt(jwt));
+    }
+
+    @PostMapping("/execute")
+    public SqlExecutionResult executeSql(@AuthenticationPrincipal Jwt jwt,
+                                         @RequestBody(required = false) QueryRequest request) {
+        if (request == null || !StringUtils.hasText(request.sql())) {
+            throw new TrinoQueryValidationException("sql is required");
+        }
+        return trinoQueryService.executeSql(request.sql(), requireJwt(jwt));
     }
 
     @PostMapping("/catalogs")
@@ -43,7 +53,7 @@ public class TrinoQueryController {
             throw new TrinoQueryValidationException("request body is required");
         }
         trinoQueryService.createCatalog(request.catalogName(), request.connectorName(),
-                request.properties(), requireToken(jwt));
+                request.properties(), requireJwt(jwt));
         return created("Catalog created");
     }
 
@@ -55,7 +65,7 @@ public class TrinoQueryController {
             throw new TrinoQueryValidationException("request body is required");
         }
         trinoQueryService.createSchema(request.catalogName(), request.schemaName(),
-                request.location(), request.ifNotExists(), requireToken(jwt));
+                request.location(), request.ifNotExists(), requireJwt(jwt));
         return created("Schema created");
     }
 
@@ -67,15 +77,15 @@ public class TrinoQueryController {
             throw new TrinoQueryValidationException("request body is required");
         }
         trinoQueryService.createTable(request.catalogName(), request.schemaName(), request.tableName(),
-                request.columns(), request.properties(), request.ifNotExists(), requireToken(jwt));
+                request.columns(), request.properties(), request.ifNotExists(), requireJwt(jwt));
         return created("Table created");
     }
 
-    private String requireToken(Jwt jwt) {
+    private Jwt requireJwt(Jwt jwt) {
         if (jwt == null) {
             throw new TrinoQueryValidationException("A valid bearer token is required");
         }
-        return jwt.getTokenValue();
+        return jwt;
     }
 
     private ResponseEntity<ActionResponse> created(String message) {

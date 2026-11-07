@@ -10,6 +10,7 @@ services:
       http_proxy: "http://http.docker.internal:3128"
       https_proxy: "http://http.docker.internal:3128"
       all_proxy: "http://http.docker.internal:3128"
+      JWT_SECRET_BASE64: ${JWT_SECRET_BASE64:?Set it to the same Base64 secret used by Spring}
     ports:
       - "8181:8181"
     mem_limit: 256m

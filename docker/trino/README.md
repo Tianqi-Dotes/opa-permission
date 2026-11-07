@@ -69,9 +69,18 @@ The `local_pg` catalog uses the PostgreSQL connector and connects to the host da
 
 The Trino image includes the OPA access-control plugin. `etc/access-control.properties` points to OPA's `trino.allow`, `trino.rowFilters`, and `trino.columnMask` decision paths. Trino sends its normal identity and action/resource context, and forwards the raw access token as the `jwt` extra credential on Backend JDBC connections. OPA receives it at `input.context.identity.extraCredentials.jwt`; it must verify the JWT signature and required claims before trusting the decoded payload. Decoding without signature verification is not sufficient.
 
-The OPA plugin only forwards the extra-credential keys listed in `opa.identity.extra-credentials-keys`. Direct Trino clients must also provide the `jwt` extra credential; Backend JDBC connections populate it automatically. The normal Trino `accessToken` is still used for Trino authentication, while the extra credential lets OPA independently verify and parse the same JWT. Password authentication does not provide a JWT to OPA; when policies require JWT claims, use JWT login or provide a separately issued JWT as the `jwt` extra credential. Keep OPA request logging disabled to avoid logging bearer tokens.
+The OPA plugin only forwards the extra-credential keys listed in `opa.identity.extra-credentials-keys`. Direct Trino clients must also provide the `jwt` extra credential; Backend JDBC connections populate it automatically. The normal Trino `accessToken` is still used for Trino authentication, while the extra credential lets OPA independently verify and parse the same JWT. Password authentication does not provide a JWT to OPA; when policies require JWT claims, use JWT login or provide a separately issued JWT as the `jwt` extra credential.
 
-The OPA server must expose the configured paths and return the response formats expected by Trino: a boolean for `allow`, an array of filter expressions for `rowFilters`, and a mask expression for `columnMask`. The currently running local OPA has no `data.trino` policy paths yet, so queries will be denied or fail until those rules are added. `host.docker.internal` is used for the local Docker Desktop setup; replace it with the OPA service DNS name in a shared Docker network deployment.
+The local OPA policy verifies the JWT with `io.jwt.decode_verify`, using `JWT_SECRET_BASE64` from the OPA container environment. Set it to the same Base64 key used by Spring and Trino before starting OPA. From the repository root in PowerShell:
+
+```powershell
+$env:JWT_SECRET_BASE64 = (Get-Content .\docker\trino\jwt-key -Raw).Trim()
+docker compose -f .\docker\docker-compose.yml up -d --force-recreate opa
+```
+
+The local Compose configuration enables decision logs on the console for debugging. These logs include the raw JWT extra credential; protect them and disable decision logging when it is no longer needed.
+
+The current `policy/policy/policy.rego` implements `data.trino.allow` and permits only the authenticated `admin` user when the verified JWT subject matches that user and `tenant_id` is `1`; all other requests are denied. The OPA Compose service downloads `master/bundle.tar.gz` from GitHub, so publish the updated policy bundle and wait for OPA's polling interval before expecting local policy edits to take effect. The OPA server must expose the configured paths and return the response formats expected by Trino: a boolean for `allow`, an array of filter expressions for `rowFilters`, and a mask expression for `columnMask`. `host.docker.internal` is used for the local Docker Desktop setup; replace it with the OPA service DNS name in a shared Docker network deployment.
 
 ## Execute SQL through the backend
 

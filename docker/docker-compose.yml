@@ -1,6 +1,15 @@
 services:
   opa:
     image: openpolicyagent/opa:latest
+    secrets:
+      - github_token
+    environment:
+      HTTP_PROXY: "http://http.docker.internal:3128"
+      HTTPS_PROXY: "http://http.docker.internal:3128"
+      ALL_PROXY: "http://http.docker.internal:3128"
+      http_proxy: "http://http.docker.internal:3128"
+      https_proxy: "http://http.docker.internal:3128"
+      all_proxy: "http://http.docker.internal:3128"
     ports:
       - "8181:8181"
     mem_limit: 256m
@@ -10,7 +19,12 @@ services:
       - --server
       - --addr=0.0.0.0:8181
       - --set=services.github.url=https://raw.githubusercontent.com
+      - --set=services.github.credentials.bearer.token_path=/run/secrets/github_token
       - --set=bundles.authorization.service=github
-      - --set=bundles.authorization.resource=${OPA_GITHUB_BUNDLE_PATH:?Set OPA_GITHUB_BUNDLE_PATH to owner/repo/branch/path/to/bundle.tar.gz}
+      - --set=bundles.authorization.resource=Tianqi-Dotes/opa-permission/master/bundle.tar.gz
       - --set=bundles.authorization.polling.min_delay_seconds=60
       - --set=bundles.authorization.polling.max_delay_seconds=120
+
+secrets:
+  github_token:
+    file: ./github_token

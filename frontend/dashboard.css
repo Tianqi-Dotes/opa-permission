@@ -419,6 +419,7 @@ button {
 
 .permission-test-panel[hidden],
 .assign-role-panel[hidden],
+.trino-query-panel[hidden],
 .create-bucket-panel[hidden],
 .attribute-dictionary-panel[hidden],
 .resource-scope-panel[hidden],
@@ -437,6 +438,7 @@ button {
 }
 
 .assign-role-panel,
+.trino-query-panel,
 .create-bucket-panel {
     margin-top: 18px;
     padding: 23px;
@@ -444,6 +446,38 @@ button {
     border-radius: 13px;
     background: #fff;
     box-shadow: 0 5px 18px rgba(39, 60, 94, .035);
+}
+
+.trino-query-form {
+    display: grid;
+    gap: 14px;
+    margin-top: 20px;
+}
+
+.trino-query-form textarea {
+    min-height: 200px;
+    font-family: Consolas, "Courier New", monospace;
+    line-height: 1.5;
+}
+
+.trino-query-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.trino-query-status {
+    margin: 14px 0 0;
+    color: #78869d;
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.trino-query-results {
+    margin-top: 4px;
+}
+
+.trino-query-table-wrap {
+    max-height: 520px;
 }
 
 .assign-role-header {
@@ -1672,6 +1706,7 @@ button {
     }
 
     .assign-role-panel,
+    .trino-query-panel,
     .create-bucket-panel {
         padding: 18px;
     }

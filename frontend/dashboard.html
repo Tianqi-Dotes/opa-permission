@@ -176,6 +176,30 @@
                 </p>
             </div>
 
+            <section class="trino-query-panel" id="trino-query-panel" hidden
+                     aria-labelledby="trino-query-title">
+                <div class="assign-role-header">
+                    <div>
+                        <h2 id="trino-query-title">Run SQL on Trino</h2>
+                        <p>Execute one SQL statement. Trino and OPA determine which operations are allowed.</p>
+                    </div>
+                </div>
+                <form class="trino-query-form" id="trino-query-form">
+                    <label class="form-field" for="trino-sql">
+                        <span>SQL statement</span>
+                        <textarea id="trino-sql" name="sql" rows="10" spellcheck="false"
+                                  placeholder="SELECT * FROM catalog.schema.table LIMIT 100" required></textarea>
+                    </label>
+                    <div class="trino-query-actions">
+                        <button class="primary-button" id="trino-query-submit" type="submit">Run SQL</button>
+                    </div>
+                </form>
+                <p class="trino-query-status" id="trino-query-status" role="status" aria-live="polite">
+                    Enter a SQL statement to get started.
+                </p>
+                <div class="trino-query-results" id="trino-query-results" hidden></div>
+            </section>
+
             <section class="attribute-dictionary-panel" id="attribute-dictionary-panel" hidden
                      aria-labelledby="attribute-dictionary-title">
                 <div class="attribute-dictionary-header">

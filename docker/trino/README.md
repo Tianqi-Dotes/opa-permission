@@ -1,10 +1,12 @@
-# Trino with the application's JWT authentication
+# Trino with JWT and password authentication
 
-This is a single-node Trino coordinator configured to validate bearer tokens issued by this application's `JwtTokenService`. The service signs JWTs with HS256, sets `iss` to `opa-permission`, and uses the username as `sub`. Trino maps `sub` to the Trino user. The service currently does not issue an `aud` claim, so no audience restriction is configured.
+This is a single-node Trino coordinator configured to accept both JWTs issued by this application's `JwtTokenService` and local file-based password authentication. JWTs use HS256, `iss=opa-permission`, and the username as `sub`. The password authenticator uses the local, gitignored `password.db`; the `admin` password entry is stored as a PBKDF2 hash.
 
-> **Warning:** HTTP does not encrypt traffic. The bearer token can be observed by anyone who can access the network path. `http-server.authentication.allow-insecure-over-http=true` is only for local development/testing; do not expose this service to an untrusted network. Enable HTTPS before production use.
+> **Warning:** The local HTTPS certificate is self-signed, and `admin/123456` is only suitable for local testing. Replace both for shared or production use. HTTP port 8080 is not published by Compose; clients connect over HTTPS on port 8443.
 
 ## Prepare configuration
+
+The local configuration uses ignored files for credentials and private keys: `.env`, `jwt-key`, `password.db`, and `certs/trino-keystore.p12`. The Compose file passes the PostgreSQL and keystore passwords from `.env`; do not commit those values. `local_pg.properties` connects to the host's PostgreSQL server at `host.docker.internal:5432/postgres` as `admin`.
 
 Run these commands in PowerShell from this directory to create a local 256-bit JWT key file and a separate Trino internal-communication secret:
 
@@ -25,6 +27,8 @@ $envText = (Get-Content .env -Raw).Replace(
 [System.IO.File]::WriteAllText((Join-Path (Get-Location) ".env"), $envText)
 ```
 
+The local `.env` also needs `TRINO_HTTPS_KEYSTORE_PASSWORD` matching the generated PKCS#12 keystore and `TRINO_PG_PASSWORD` matching the PostgreSQL `admin` account. The local password file must contain the PBKDF2 hash for the Trino `admin` account; it is mounted read-only and reloaded periodically.
+
 Use the exact same `JWT_SECRET_BASE64` value for the Java application. From the repository root, for example:
 
 ```powershell
@@ -43,19 +47,29 @@ docker compose up -d
 docker compose logs -f trino
 ```
 
-Trino is available at `http://localhost:8080` by default. Send a token returned by the application's login endpoint as a bearer token. For example, with the Trino CLI:
+Trino is available at `https://localhost:8443`. Since the local certificate is self-signed, use `--insecure` with the CLI for local testing. Password login:
 
 ```powershell
-trino --server http://localhost:8080 --access-token "<jwt>"
+trino --server https://localhost:8443 --user admin --password --insecure
+```
+
+JWT login remains available as well:
+
+```powershell
+trino --server https://localhost:8443 --access-token "<jwt>" --extra-credential "jwt:<jwt>" --insecure
 ```
 
 The token's signature is checked against the shared HS256 key, its `iss` must be `opa-permission`, and its `sub` becomes the Trino user. Tokens expire after 900 seconds by default (`security.jwt.expiration-seconds`).
+
+## Local PostgreSQL catalog
+
+The `local_pg` catalog uses the PostgreSQL connector and connects to the host database `postgres` on port 5432. For example, `SHOW SCHEMAS FROM local_pg` lists schemas, and `SELECT * FROM local_pg.test.users` reads the application's users table. The PostgreSQL role `admin` must already exist and be reachable from Docker; Trino does not create that PostgreSQL account.
 
 ## OPA access control and JWT claims
 
 The Trino image includes the OPA access-control plugin. `etc/access-control.properties` points to OPA's `trino.allow`, `trino.rowFilters`, and `trino.columnMask` decision paths. Trino sends its normal identity and action/resource context, and forwards the raw access token as the `jwt` extra credential on Backend JDBC connections. OPA receives it at `input.context.identity.extraCredentials.jwt`; it must verify the JWT signature and required claims before trusting the decoded payload. Decoding without signature verification is not sufficient.
 
-The OPA plugin only forwards the extra-credential keys listed in `opa.identity.extra-credentials-keys`. Direct Trino clients must also provide the `jwt` extra credential; Backend JDBC connections populate it automatically. The normal Trino `accessToken` is still used for Trino authentication, while the extra credential lets OPA independently verify and parse the same JWT. Keep OPA request logging disabled to avoid logging bearer tokens.
+The OPA plugin only forwards the extra-credential keys listed in `opa.identity.extra-credentials-keys`. Direct Trino clients must also provide the `jwt` extra credential; Backend JDBC connections populate it automatically. The normal Trino `accessToken` is still used for Trino authentication, while the extra credential lets OPA independently verify and parse the same JWT. Password authentication does not provide a JWT to OPA; when policies require JWT claims, use JWT login or provide a separately issued JWT as the `jwt` extra credential. Keep OPA request logging disabled to avoid logging bearer tokens.
 
 The OPA server must expose the configured paths and return the response formats expected by Trino: a boolean for `allow`, an array of filter expressions for `rowFilters`, and a mask expression for `columnMask`. The currently running local OPA has no `data.trino` policy paths yet, so queries will be denied or fail until those rules are added. `host.docker.internal` is used for the local Docker Desktop setup; replace it with the OPA service DNS name in a shared Docker network deployment.
 

@@ -3,12 +3,18 @@ services:
     image: trinodb/trino:latest
     container_name: trino
     ports:
-      - "${TRINO_HTTP_PORT:-8080}:8080"
+      - "${TRINO_HTTPS_PORT:-8443}:8443"
     environment:
       TRINO_INTERNAL_SHARED_SECRET: ${TRINO_INTERNAL_SHARED_SECRET:?Set it in docker/trino/.env}
+      TRINO_HTTPS_KEYSTORE_PASSWORD: ${TRINO_HTTPS_KEYSTORE_PASSWORD:?Set it in docker/trino/.env}
+      TRINO_PG_PASSWORD: ${TRINO_PG_PASSWORD:?Set it in docker/trino/.env}
     volumes:
       - ./etc/config.properties:/etc/trino/config.properties:ro
       - ./etc/access-control.properties:/etc/trino/access-control.properties:ro
+      - ./etc/password-authenticator.properties:/etc/trino/password-authenticator.properties:ro
+      - ./etc/catalog/local_pg.properties:/etc/trino/catalog/local_pg.properties:ro
+      - ./password.db:/etc/trino/password.db:ro
+      - ./certs/trino-keystore.p12:/etc/trino/certs/trino-keystore.p12:ro
       - ./jwt-key:/etc/trino/jwt-key:ro
       - trino-data:/data/trino
     restart: unless-stopped

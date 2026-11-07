@@ -82,9 +82,9 @@ const pages = {
     "query-trino": {
         section: "Workspace",
         title: "Query Trino",
-        description: "Run read-only queries against your connected Trino catalogs.",
+        description: "Execute SQL statements against your connected Trino catalogs.",
         featureTitle: "Trino query",
-        featureDescription: "The query workspace will be available here.",
+        featureDescription: "Run SQL statements through Trino with OPA authorization.",
         symbol: "QT"
     },
     "create-trino-table": {
@@ -138,6 +138,12 @@ const permissionTestPanel = document.querySelector("#permission-test-panel");
 const permissionTestList = document.querySelector("#permission-test-list");
 const permissionTestSummary = document.querySelector("#permission-test-summary");
 const runAllPermissionTestsButton = document.querySelector("#run-all-permission-tests");
+const trinoQueryPanel = document.querySelector("#trino-query-panel");
+const trinoQueryForm = document.querySelector("#trino-query-form");
+const trinoSqlInput = document.querySelector("#trino-sql");
+const trinoQuerySubmit = document.querySelector("#trino-query-submit");
+const trinoQueryStatus = document.querySelector("#trino-query-status");
+const trinoQueryResults = document.querySelector("#trino-query-results");
 const attributeDictionaryPanel = document.querySelector("#attribute-dictionary-panel");
 const attributeCategoryFilter = document.querySelector("#attribute-category-filter");
 const refreshAttributesButton = document.querySelector("#refresh-attributes");
@@ -281,12 +287,14 @@ const createBucketStatus = document.querySelector("#create-bucket-status");
 const apiBaseUrl = (window.API_BASE_URL || "http://localhost:1111").replace(/\/+$/, "");
 const trinoPermissionTests = [
     {name: "Query Trino", path: "/api/trino/query", body: {sql: ""}},
+    {name: "Execute Trino SQL", path: "/api/trino/execute", body: {sql: ""}},
     {name: "Create Trino Catalog", path: "/api/trino/catalogs", body: {}},
     {name: "Create Trino Schema", path: "/api/trino/schemas", body: {}},
     {name: "Create Trino Table", path: "/api/trino/tables", body: {}}
 ];
 const permissionTestRows = new Map();
 let permissionTestRunInProgress = false;
+let trinoQueryInProgress = false;
 let userListLoading = false;
 let roleAssignmentInProgress = false;
 let userListLoaded = false;
@@ -393,14 +401,16 @@ function showPage(pageKey) {
     const isResourceAttributesPage = pageKey === "resource-attributes";
     const isPolicyConfigPage = pageKey === "policy-config";
     const isCreateBucketPage = pageKey === "create-bucket";
+    const isTrinoQueryPage = pageKey === "query-trino";
     featureCard.hidden = isAssignRolesPage || isPermissionTestPage
         || isAttributeDictionaryPage || isAttributeTemplatesPage || isSubjectAttributesPage
-        || isResourceAttributesPage || isPolicyConfigPage || isCreateBucketPage;
+        || isResourceAttributesPage || isPolicyConfigPage || isCreateBucketPage || isTrinoQueryPage;
     infoRow.hidden = isAssignRolesPage || isPermissionTestPage
         || isAttributeDictionaryPage || isAttributeTemplatesPage || isSubjectAttributesPage
-        || isResourceAttributesPage || isPolicyConfigPage || isCreateBucketPage;
+        || isResourceAttributesPage || isPolicyConfigPage || isCreateBucketPage || isTrinoQueryPage;
     assignRolePanel.hidden = !isAssignRolesPage;
     permissionTestPanel.hidden = !isPermissionTestPage;
+    trinoQueryPanel.hidden = !isTrinoQueryPage;
     attributeDictionaryPanel.hidden = !isAttributeDictionaryPage;
     attributeTemplatePanel.hidden = !isAttributeTemplatesPage;
     subjectAttributesPanel.hidden = !isSubjectAttributesPage;
@@ -496,6 +506,112 @@ async function createBucket(event) {
     } finally {
         bucketCreationInProgress = false;
         createBucketSubmit.disabled = false;
+    }
+}
+
+function formatTrinoCell(value) {
+    if (value === null || value === undefined) {
+        return "NULL";
+    }
+    if (typeof value === "object") {
+        return JSON.stringify(value) ?? String(value);
+    }
+    return String(value);
+}
+
+function renderTrinoQueryResult(result) {
+    trinoQueryResults.replaceChildren();
+    if (!result.hasResultSet) {
+        trinoQueryResults.hidden = true;
+        return;
+    }
+
+    const columns = Array.isArray(result.columns) ? result.columns : [];
+    const rows = Array.isArray(result.rows) ? result.rows : [];
+    if (columns.length === 0) {
+        trinoQueryResults.hidden = true;
+        return;
+    }
+
+    const wrapper = document.createElement("div");
+    wrapper.className = "attribute-table-wrap trino-query-table-wrap";
+    const table = document.createElement("table");
+    table.className = "attribute-table";
+    const tableHead = document.createElement("thead");
+    const headerRow = document.createElement("tr");
+    columns.forEach((column) => {
+        const header = document.createElement("th");
+        header.scope = "col";
+        header.textContent = column;
+        headerRow.append(header);
+    });
+    tableHead.append(headerRow);
+    table.append(tableHead);
+
+    const tableBody = document.createElement("tbody");
+    rows.forEach((row) => {
+        const tableRow = document.createElement("tr");
+        columns.forEach((_, index) => {
+            const cell = document.createElement("td");
+            cell.textContent = formatTrinoCell(row[index]);
+            tableRow.append(cell);
+        });
+        tableBody.append(tableRow);
+    });
+    table.append(tableBody);
+    wrapper.append(table);
+    trinoQueryResults.append(wrapper);
+    trinoQueryResults.hidden = false;
+}
+
+async function executeTrinoSql(event) {
+    event.preventDefault();
+    if (trinoQueryInProgress || !trinoQueryForm.reportValidity()) {
+        return;
+    }
+
+    const sql = trinoSqlInput.value.trim();
+    if (!sql) {
+        trinoQueryStatus.textContent = "Enter a SQL statement.";
+        trinoSqlInput.focus();
+        return;
+    }
+
+    trinoQueryInProgress = true;
+    trinoQuerySubmit.disabled = true;
+    trinoQueryStatus.textContent = "Executing SQL...";
+    trinoQueryResults.replaceChildren();
+    trinoQueryResults.hidden = true;
+    try {
+        const response = await fetch(`${apiBaseUrl}/api/trino/execute`, {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({sql})
+        });
+        if (!response.ok) {
+            throw new Error(await getApiError(response));
+        }
+
+        const result = await response.json();
+        renderTrinoQueryResult(result);
+        if (result.hasResultSet) {
+            const rowCount = Array.isArray(result.rows) ? result.rows.length : 0;
+            trinoQueryStatus.textContent = result.truncated
+                ? `Query succeeded. Showing ${rowCount} rows; additional rows were truncated.`
+                : `Query succeeded. ${rowCount} row${rowCount === 1 ? "" : "s"} returned.`;
+        } else if (result.updateCount !== null && result.updateCount !== undefined) {
+            trinoQueryStatus.textContent = `SQL statement completed. ${result.updateCount} row(s) affected.`;
+        } else {
+            trinoQueryStatus.textContent = "SQL statement completed successfully.";
+        }
+    } catch (error) {
+        trinoQueryStatus.textContent = error.message || "Unable to execute SQL on Trino.";
+    } finally {
+        trinoQueryInProgress = false;
+        trinoQuerySubmit.disabled = false;
     }
 }
 
@@ -2772,6 +2888,7 @@ userName.textContent = username;
 userAvatar.textContent = username.charAt(0).toUpperCase();
 initializePermissionTests();
 runAllPermissionTestsButton.addEventListener("click", runAllPermissionTests);
+trinoQueryForm.addEventListener("submit", executeTrinoSql);
 refreshUsersButton.addEventListener("click", loadUsers);
 assignRoleForm.addEventListener("submit", assignSelectedRole);
 assignRoleUser.addEventListener("change", updateAssignRoleSubmitState);

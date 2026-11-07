@@ -1,1 +1,2 @@
+cd policy
 tar -czf ..\bundle.tar.gz -C . .

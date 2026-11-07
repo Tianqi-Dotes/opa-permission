@@ -13,6 +13,7 @@ public class AttributeDefinition {
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
     private String name;
+    //category IN ('subject', 'resource', 'environment', 'action')
     private String category;
     private String dataType;
     private Boolean multiValued;

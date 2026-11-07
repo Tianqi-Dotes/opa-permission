@@ -631,6 +631,314 @@
                 </p>
             </section>
 
+            <section class="policy-config-panel" id="policy-config-panel" hidden
+                     aria-labelledby="policy-config-title">
+                <div class="policy-config-header">
+                    <div>
+                        <h2 id="policy-config-title">ABAC policy configuration</h2>
+                        <p>Configure a resource scope, request context, and the decisions applied to matching requests.</p>
+                    </div>
+                    <div class="policy-config-actions">
+                        <button class="secondary-button" id="validate-policy-config" type="button">Validate</button>
+                        <button class="primary-button" id="generate-policy-rego" type="button">Generate artifacts</button>
+                    </div>
+                </div>
+                <p class="policy-config-notice">
+                    Single-tenant prototype. Resource and attribute catalogs use existing APIs; environment mappings,
+                    policy rules, and generated artifacts are local drafts and are not saved yet.
+                </p>
+
+                <div class="policy-config-meta policy-config-meta-compact">
+                    <label class="form-field">
+                        <span>Configuration name</span>
+                        <input id="policy-config-name" value="Default ABAC Policy" maxlength="128" required>
+                    </label>
+                    <label class="form-field">
+                        <span>Entrypoint</span>
+                        <input id="policy-config-entrypoint" value="data.opa_permission.decision"
+                               spellcheck="false" required>
+                    </label>
+                </div>
+
+                <div class="policy-config-summary" aria-label="Policy summary">
+                    <div class="policy-summary-card">
+                        <span>Total rules</span>
+                        <strong id="policy-total-rules">0</strong>
+                    </div>
+                    <div class="policy-summary-card">
+                        <span>Enabled</span>
+                        <strong id="policy-enabled-rules">0</strong>
+                    </div>
+                    <div class="policy-summary-card">
+                        <span>Environment mappings</span>
+                        <strong id="policy-effect-counts">0 / 0</strong>
+                    </div>
+                    <div class="policy-summary-card">
+                        <span>Draft status</span>
+                        <strong id="policy-draft-status">Not generated</strong>
+                    </div>
+                </div>
+
+                <section class="policy-step-panel" aria-labelledby="policy-resource-title">
+                    <div class="policy-step-heading">
+                        <span class="policy-step-number">1</span>
+                        <div>
+                            <h3 id="policy-resource-title">Choose resource scope</h3>
+                            <p>Resources are loaded for the current tenant and displayed with their parent hierarchy.</p>
+                        </div>
+                    </div>
+                    <div class="policy-resource-picker">
+                        <label class="form-field">
+                            <span>Resource</span>
+                            <select id="policy-resource-select" required>
+                                <option value="">Load resources to choose a scope</option>
+                            </select>
+                        </label>
+                        <button class="secondary-button" id="refresh-policy-resources" type="button">
+                            Refresh resources
+                        </button>
+                    </div>
+                    <p class="attribute-status" id="policy-resource-status" role="status" aria-live="polite">
+                        Resources have not been loaded.
+                    </p>
+                    <div class="policy-resource-selection" id="policy-resource-selection">
+                        Select a resource to view its hierarchy and available attributes.
+                    </div>
+                    <p class="policy-catalog-note">
+                        The generated Rego scopes rules by <code>input.resource.id</code>; the authorization request
+                        must include the selected resource ID. This prototype targets the exact resource only; descendant
+                        inheritance semantics remain to be defined.
+                    </p>
+                    <div class="policy-attribute-catalogs" id="policy-attribute-catalogs" hidden>
+                        <section class="policy-attribute-catalog" aria-labelledby="policy-resource-attribute-title">
+                            <h4 id="policy-resource-attribute-title">Resource attributes</h4>
+                            <div class="policy-attribute-chip-list" id="policy-resource-attribute-list"></div>
+                            <p class="policy-catalog-note">
+                                Showing resource-category definitions from the attribute dictionary. Resource-type
+                                specific binding can be connected when its API is available.
+                            </p>
+                        </section>
+                        <section class="policy-attribute-catalog" aria-labelledby="policy-subject-attribute-title">
+                            <h4 id="policy-subject-attribute-title">Subject attributes</h4>
+                            <div class="policy-attribute-chip-list" id="policy-subject-attribute-list"></div>
+                        </section>
+                    </div>
+                </section>
+
+                <section class="policy-step-panel" aria-labelledby="policy-environment-title">
+                    <div class="policy-step-heading">
+                        <span class="policy-step-number">2</span>
+                        <div>
+                            <h3 id="policy-environment-title">Configure environment context</h3>
+                            <p>Optionally map request context values into environment attributes used by the policy.</p>
+                        </div>
+                    </div>
+                    <label class="policy-toggle-field">
+                        <input id="policy-environment-enabled" type="checkbox">
+                        <span>Use environment attributes for this policy</span>
+                    </label>
+                    <div class="policy-environment-settings" id="policy-environment-settings" hidden>
+                        <div class="policy-section-header">
+                            <div>
+                                <h4>Environment mappings</h4>
+                                <p>Choose an environment attribute and the request-context path that supplies its value.</p>
+                            </div>
+                            <button class="secondary-button" id="add-policy-environment-rule" type="button">
+                                Add mapping
+                            </button>
+                        </div>
+                        <div class="policy-environment-rule-list" id="policy-environment-rule-list"></div>
+                        <p class="policy-catalog-note">
+                            Example source paths: request.client_ip or request.time.hour. The extraction endpoint will
+                            be connected later.
+                        </p>
+                    </div>
+                </section>
+
+                <section class="policy-step-panel" aria-labelledby="policy-rules-title">
+                    <div class="policy-step-heading">
+                        <span class="policy-step-number">3</span>
+                        <div>
+                            <h3 id="policy-rules-title">Define subject and resource rules</h3>
+                            <p>Conditions can reference subject/resource attributes and, when enabled, environment attributes.</p>
+                        </div>
+                    </div>
+                    <p class="policy-decision-note">
+                        The first matching rule by ascending priority wins. If no rule matches, access is denied.
+                        Row filtering and column masking are returned as structured decisions for the data layer to enforce.
+                    </p>
+                    <div class="policy-rule-workspace">
+                        <section class="policy-rule-list-panel" aria-label="Policy rule list">
+                            <div class="policy-section-header">
+                                <div>
+                                    <h4>Rules</h4>
+                                    <p>Add allow, deny, row-filtering, or column-masking decisions.</p>
+                                </div>
+                                <button class="secondary-button" id="add-policy-rule" type="button" disabled>
+                                    Add rule
+                                </button>
+                            </div>
+                            <div class="policy-rule-list" id="policy-rule-list"></div>
+                            <p class="attribute-status" id="policy-rule-list-status" role="status" aria-live="polite">
+                                No rules added yet.
+                            </p>
+                        </section>
+
+                        <section class="policy-rule-editor-panel" aria-labelledby="policy-editor-title">
+                            <div class="policy-empty-editor" id="policy-empty-editor">
+                                <strong>Select a rule or add a new one</strong>
+                                <span>Start with subject/resource conditions, then choose the decision returned when they match.</span>
+                            </div>
+                            <form id="policy-rule-form" hidden>
+                            <div class="policy-section-header">
+                                <div>
+                                    <h4 id="policy-editor-title">Rule editor</h4>
+                                    <p>Build the match conditions and decision for this rule.</p>
+                                </div>
+                            </div>
+                            <div class="policy-rule-fields">
+                                <label class="form-field">
+                                    <span>Rule name</span>
+                                    <input id="policy-rule-name" maxlength="256" required>
+                                </label>
+                                <label class="form-field">
+                                    <span>Rule code</span>
+                                    <input id="policy-rule-code" maxlength="128" required>
+                                </label>
+                                <label class="form-field">
+                                    <span>Decision</span>
+                                    <select id="policy-rule-effect">
+                                        <option value="permit">Allow</option>
+                                        <option value="deny">Deny</option>
+                                        <option value="row_filtering">Row filtering</option>
+                                        <option value="column_masking">Column masking</option>
+                                    </select>
+                                </label>
+                                <label class="form-field">
+                                    <span>Priority</span>
+                                    <input id="policy-rule-priority" type="number" min="1" step="1" value="100" required>
+                                </label>
+                                <label class="policy-enabled-field">
+                                    <input id="policy-rule-enabled" type="checkbox" checked>
+                                    <span>Rule enabled</span>
+                                </label>
+                                <label class="form-field">
+                                    <span>Conditions match</span>
+                                    <select id="policy-rule-match-mode">
+                                        <option value="all">All conditions (AND)</option>
+                                        <option value="any">Any condition (OR)</option>
+                                    </select>
+                                </label>
+                            </div>
+
+                            <div class="policy-decision-settings policy-row-filter-settings"
+                                 id="policy-row-filter-settings" hidden>
+                                <h4>Row filter output</h4>
+                                <p>Return a structured resource attribute condition for the data layer to enforce.</p>
+                                <div class="policy-rule-fields">
+                                    <label class="form-field">
+                                        <span>Resource attribute</span>
+                                        <select id="policy-row-filter-attribute"></select>
+                                    </label>
+                                    <label class="form-field">
+                                        <span>Operator</span>
+                                        <select id="policy-row-filter-operator"></select>
+                                    </label>
+                                    <label class="form-field">
+                                        <span>Value (JSON or text)</span>
+                                        <input id="policy-row-filter-value" type="text"
+                                               placeholder='"finance" or 10'>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="policy-decision-settings policy-column-masking-settings"
+                                 id="policy-column-masking-settings" hidden>
+                                <h4>Column masking output</h4>
+                                <p>Select resource attributes to mask and choose a masking strategy.</p>
+                                <div class="policy-mask-list" id="policy-column-masking-list"></div>
+                            </div>
+
+                            <div class="policy-condition-header">
+                                <div>
+                                    <h4>Conditions</h4>
+                                    <p>Select subject/resource attributes; environment attributes are available when enabled.</p>
+                                </div>
+                                <button class="secondary-button" id="add-policy-condition" type="button">
+                                    Add condition
+                                </button>
+                            </div>
+                            <div class="policy-condition-list" id="policy-condition-list"></div>
+                            <p class="attribute-status" id="policy-editor-status" role="status" aria-live="polite"></p>
+                            <div class="policy-editor-actions">
+                                <button class="primary-button" type="submit">Apply rule</button>
+                                <button class="secondary-button" id="delete-policy-rule" type="button">Delete rule</button>
+                            </div>
+                            </form>
+                        </section>
+                    </div>
+                </section>
+
+                <section class="policy-step-panel" aria-labelledby="policy-static-data-title">
+                    <div class="policy-step-heading">
+                        <span class="policy-step-number">4</span>
+                        <div>
+                            <h3 id="policy-static-data-title">Configure static policy data</h3>
+                            <p>Only include data that is intentionally packaged with the policy bundle.</p>
+                        </div>
+                    </div>
+                    <label class="policy-toggle-field">
+                        <input id="policy-static-data-enabled" type="checkbox">
+                        <span>Generate a data.json file</span>
+                    </label>
+                    <label class="form-field policy-static-data-editor" id="policy-static-data-editor" hidden>
+                        <span>Static data (JSON object)</span>
+                        <textarea id="policy-static-data-json" rows="8" spellcheck="false">{}</textarea>
+                    </label>
+                </section>
+
+                <div class="policy-step-heading policy-output-heading">
+                    <span class="policy-step-number">5</span>
+                    <div>
+                        <h3>Generate and review policy artifacts</h3>
+                        <p>Preview the rule file and optional static data file before connecting save/publish APIs.</p>
+                    </div>
+                </div>
+                <div class="policy-output-grid">
+                    <section class="policy-validation-panel" aria-labelledby="policy-validation-title">
+                        <div class="policy-section-header">
+                            <div>
+                                <h3 id="policy-validation-title">Validation</h3>
+                                <p>Check scope, attributes, and decision output before generating files.</p>
+                            </div>
+                        </div>
+                        <ul class="policy-validation-list" id="policy-validation-list">
+                            <li class="is-neutral">Add a rule, then validate the configuration.</li>
+                        </ul>
+                    </section>
+                    <section class="policy-rego-panel" aria-labelledby="policy-rego-title">
+                        <div class="policy-section-header">
+                            <div>
+                                <h3 id="policy-rego-title">policy.rego preview</h3>
+                                <p id="policy-rego-entrypoint">Entrypoint: data.opa_permission.decision</p>
+                            </div>
+                        </div>
+                        <pre class="policy-rego-code" id="policy-rego-preview">Generate artifacts to inspect the policy rule file.</pre>
+                        <div class="policy-data-preview-panel">
+                            <h4>data.json preview</h4>
+                            <pre class="policy-rego-code" id="policy-data-preview">No static data configured; data.json will not be generated.</pre>
+                        </div>
+                        <div class="policy-data-preview-panel">
+                            <h4>Environment mapping configuration preview</h4>
+                            <pre class="policy-rego-code" id="policy-environment-preview">Environment context is not enabled.</pre>
+                        </div>
+                    </section>
+                </div>
+                <p class="attribute-status" id="policy-config-status" role="status" aria-live="polite">
+                    Policy configuration is a local draft. Saving and publishing will be added with backend APIs.
+                </p>
+            </section>
+
             <div class="info-row" id="info-row" hidden>
                 <span class="info-icon" aria-hidden="true">i</span>
                 <p>Protected operations are evaluated by the active RBAC or ABAC policy.</p>

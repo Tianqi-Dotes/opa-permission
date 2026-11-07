@@ -24,6 +24,7 @@ services:
       - --set=bundles.authorization.resource=Tianqi-Dotes/opa-permission/master/bundle.tar.gz
       - --set=bundles.authorization.polling.min_delay_seconds=60
       - --set=bundles.authorization.polling.max_delay_seconds=120
+      - --set=decision_logs.console=true
 
 secrets:
   github_token:

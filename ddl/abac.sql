@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS test.trino_connections (
 -- category:resource,NAME:ROLE,data_type:string
 -- category:action,NAME:auth,data_type:string read/write
 -- category:environment,NAME:env,data_type:string DEV/UAT
+-- category:environment,NAME:environment,data_type:string
 CREATE TABLE IF NOT EXISTS test.attribute_definitions (
                                                      id                  BIGSERIAL PRIMARY KEY,
                                                      name                VARCHAR(128) NOT NULL,
@@ -78,7 +79,8 @@ INSERT INTO test.attribute_definitions (
     ('roles', 'subject', 'string', TRUE, TRUE, 'Effective roles derived from RBAC assignments.', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
     ('tenant_id', 'resource', 'number', FALSE, TRUE, 'Owning tenant identifier; managed by the platform.', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
     ('classification', 'resource', 'number', FALSE, TRUE, 'Resource classification level used by ABAC policies.', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
-    ('allowed_groups', 'resource', 'string', TRUE, TRUE, 'Groups allowed to access the resource.', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT)
+    ('allowed_groups', 'resource', 'string', TRUE, TRUE, 'Groups allowed to access the resource.', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
+    ('environment', 'environment', 'string', FALSE, TRUE, 'Runtime environment name used by ABAC policies.', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT)
 ON CONFLICT (category, name) DO UPDATE SET
     data_type = EXCLUDED.data_type,
     multi_valued = EXCLUDED.multi_valued,

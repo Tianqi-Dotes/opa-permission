@@ -59,13 +59,7 @@ public class TrinoConnectionController {
         try {
             TrinoConnectionService.CreateResult result =
                     trinoConnectionService.create(connectionName, jdbcUrl, tenantId);
-            return ResponseEntity.status(HttpStatus.CREATED).body(new CreateDatasourceResponse(
-                    result.connection().getId(),
-                    result.resource().getId(),
-                    result.resource().getResourceCode(),
-                    result.resource().getResourceName(),
-                    result.connection().getJdbcUrl(),
-                    result.connection().getAuthType()));
+            return ResponseEntity.status(HttpStatus.CREATED).body(result.resource());
         } catch (DuplicateKeyException exception) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(new ApiError("A Trino datasource with this name already exists in the tenant"));
@@ -124,10 +118,6 @@ public class TrinoConnectionController {
     }
 
     public record CreateDatasourceRequest(String connectionName, String jdbcUrl) {
-    }
-
-    public record CreateDatasourceResponse(Long id, Long resourceId, String resourceCode,
-                                            String connectionName, String jdbcUrl, String authType) {
     }
 
     public record ApiError(String message) {

@@ -90,6 +90,7 @@ insert into test.tenants (
     (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT
 );
 
+truncate test.permissions;
 INSERT INTO test.permissions (
     permission_id,
     permission_name,

@@ -319,7 +319,7 @@ CREATE TABLE IF NOT EXISTS test.permission_default_opa_configs (
     CONSTRAINT uq_permission_default_opa_config
         UNIQUE (permission_id, config_path)
 );
-
+truncate table test.permission_default_attribute_writes;
 INSERT INTO test.permission_default_attribute_writes (
     permission_id,
     from_type,
@@ -334,6 +334,12 @@ INSERT INTO test.permission_default_attribute_writes (
      (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT,
      (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
     (22, 'project', 'resource', 7, '{{group_name}}', TRUE,
+     (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT,
+     (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
+    (25, 'project', 'resource', 5, '{{tenant_id}}', TRUE,
+     (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT,
+     (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
+    (25, 'project', 'resource', 7, '{{group_name}}', TRUE,
      (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT,
      (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
     (4, 'project', 'subject', 4, '{{role}}', TRUE,

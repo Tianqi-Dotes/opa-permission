@@ -553,9 +553,9 @@ async function createDatasource(event) {
             throw new Error(await getApiError(response));
         }
 
-        const datasource = await response.json();
+        const resource = await response.json();
         createDatasourceStatus.textContent =
-            `Datasource "${datasource.connectionName}" saved with resource code ${datasource.resourceCode} using token authentication.`;
+            `Datasource "${resource.resourceName}" was registered with resource ID ${resource.id} and code ${resource.resourceCode} using token authentication.`;
         createDatasourceForm.reset();
     } catch (error) {
         createDatasourceStatus.textContent = error.message || "Unable to save the Trino datasource.";

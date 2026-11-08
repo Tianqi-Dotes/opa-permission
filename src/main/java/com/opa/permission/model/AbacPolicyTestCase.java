@@ -16,6 +16,7 @@ public class AbacPolicyTestCase {
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
     private Long configId;
+    private Long policyId;
     private String caseName;
     @TableField(typeHandler = JacksonTypeHandler.class)
     private Map<String, Object> inputJson;

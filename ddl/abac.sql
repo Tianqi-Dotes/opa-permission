@@ -137,37 +137,6 @@ CREATE INDEX IF NOT EXISTS idx_resource_attr_resource_attr
 CREATE INDEX IF NOT EXISTS idx_resource_attr_validity
     ON test.resource_attribute_values (valid_from, valid_to);
 
--- Optional: registry for environment context sources/rules
--- Purpose: Configures how runtime environment context is resolved.
--- Example row (environment_context_rules):
--- rule_code='ctx_env_from_header', context_key='env', source_type='request_header',
--- extractor_json='{"header":"x-env"}', default_value_json='"DEV"',
--- fail_strategy='use_default', priority=10, enabled=true
-CREATE TABLE IF NOT EXISTS test.environment_context_rules (
-                                                         id                  BIGSERIAL PRIMARY KEY,
-                                                         rule_code           VARCHAR(128) NOT NULL UNIQUE,
-                                                         context_key         VARCHAR(128) NOT NULL,
-                                                         source_type         VARCHAR(64) NOT NULL,
-                                                         scope_level         VARCHAR(32) NOT NULL DEFAULT 'global',
-                                                         applies_scope_json  JSONB NOT NULL DEFAULT '{}'::JSONB,
-                                                         extractor_json      JSONB NOT NULL DEFAULT '{}'::JSONB,
-                                                         default_value_json  JSONB,
-                                                         normalize_package   VARCHAR(256),
-                                                         normalize_rule      VARCHAR(128),
-                                                         fail_strategy       VARCHAR(32) NOT NULL DEFAULT 'use_default',
-                                                         priority            INTEGER NOT NULL DEFAULT 100,
-                                                         enabled             BOOLEAN NOT NULL DEFAULT TRUE,
-                                                         description         TEXT,
-                                                         create_time         BIGINT NOT NULL,
-                                                         update_time         BIGINT NOT NULL,
-                                                         CONSTRAINT ck_env_rule_source_type
-                                                             CHECK (source_type IN ('request_header', 'jwt_claim', 'request_param', 'fixed', 'http', 'sql')),
-                                                         CONSTRAINT ck_env_rule_scope_level
-                                                             CHECK (scope_level IN ('global', 'tenant', 'resource')),
-                                                         CONSTRAINT ck_env_rule_fail_strategy
-                                                             CHECK (fail_strategy IN ('deny', 'use_default', 'skip'))
-);
-
 -- Actions are controlled values used by policies and the policy editor.
 CREATE TABLE IF NOT EXISTS test.abac_actions (
     id              BIGSERIAL PRIMARY KEY,
@@ -217,34 +186,54 @@ CREATE TABLE IF NOT EXISTS test.abac_policy_config (
         CHECK (generation_status <> 'generated' OR generated_rego IS NOT NULL)
 );
 
-INSERT INTO test.abac_policy_config (config_id)
-VALUES (1)
-ON CONFLICT (config_id) DO NOTHING;
+CREATE TABLE IF NOT EXISTS test.abac_policies (
+    id                      BIGSERIAL PRIMARY KEY,
+    config_id               BIGINT NOT NULL,
+    policy_code             VARCHAR(128) NOT NULL,
+    policy_name             VARCHAR(256) NOT NULL,
+    combining_algorithm     VARCHAR(32) NOT NULL DEFAULT 'deny_overrides',
+    enabled                 BOOLEAN NOT NULL DEFAULT TRUE,
+    description             TEXT,
+    create_time             BIGINT NOT NULL,
+    update_time             BIGINT NOT NULL
+);
 
 -- The condition_json is a structured condition tree produced by the UI,
 -- e.g. {"all":[{"attribute":"subject.department","op":"eq","value":"finance"}]}.
 -- Generate Rego from this validated structure; do not concatenate user text as Rego.
 CREATE TABLE IF NOT EXISTS test.abac_policy_rules (
-    id                  BIGSERIAL PRIMARY KEY,
-    config_id           BIGINT NOT NULL DEFAULT 1,
-    rule_code           VARCHAR(128) NOT NULL,
-    rule_name           VARCHAR(256) NOT NULL,
-    effect              VARCHAR(16) NOT NULL,
-    priority            INTEGER NOT NULL DEFAULT 100,
-    enabled             BOOLEAN NOT NULL DEFAULT TRUE,
-    condition_json      JSONB NOT NULL,
-    description         TEXT,
-    create_time         BIGINT NOT NULL,
-    update_time         BIGINT NOT NULL
+  id                  BIGSERIAL PRIMARY KEY,
+  policy_id           BIGINT,
+  rule_code           VARCHAR(128) NOT NULL,
+  rule_name           VARCHAR(256) NOT NULL,
+  effect              VARCHAR(16) NOT NULL,
+  priority            INTEGER NOT NULL DEFAULT 100,
+  enabled             BOOLEAN NOT NULL DEFAULT TRUE,
+  condition_json      JSONB NOT NULL,
+  description         TEXT,
+  create_time         BIGINT NOT NULL,
+  update_time         BIGINT NOT NULL
 );
 
-CREATE INDEX IF NOT EXISTS idx_abac_policy_rules_config_enabled_priority
-    ON test.abac_policy_rules (config_id, enabled, priority);
+CREATE TABLE IF NOT EXISTS test.abac_policy_bindings (
+    id              BIGSERIAL PRIMARY KEY,
+    policy_id       BIGINT NOT NULL,
+    scope_type      VARCHAR(32) NOT NULL,
+    tenant_id       BIGINT,
+    resource_id     BIGINT,
+    resource_type   VARCHAR(64),
+    enabled         BOOLEAN NOT NULL DEFAULT TRUE,
+    priority        INTEGER NOT NULL DEFAULT 100,
+    create_time     BIGINT NOT NULL,
+    update_time     BIGINT NOT NULL
+);
+
 
 -- Regression cases let the UI validate the current configuration.
 CREATE TABLE IF NOT EXISTS test.abac_policy_test_cases (
     id                  BIGSERIAL PRIMARY KEY,
-    config_id           BIGINT NOT NULL DEFAULT 1,
+    config_id           BIGINT,
+    policy_id           BIGINT,
     case_name           VARCHAR(256) NOT NULL,
     input_json          JSONB NOT NULL,
     expected_decision   VARCHAR(16) NOT NULL,
@@ -255,6 +244,38 @@ CREATE TABLE IF NOT EXISTS test.abac_policy_test_cases (
     create_time         BIGINT NOT NULL,
     update_time         BIGINT NOT NULL
 );
+
+-- Optional: registry for environment context sources/rules
+-- Purpose: Configures how runtime environment context is resolved.
+-- Example row (environment_context_rules):
+-- rule_code='ctx_env_from_header', context_key='env', source_type='request_header',
+-- extractor_json='{"header":"x-env"}', default_value_json='"DEV"',
+-- fail_strategy='use_default', priority=10, enabled=true
+-- CREATE TABLE IF NOT EXISTS test.environment_context_rules (
+--       id                  BIGSERIAL PRIMARY KEY,
+--       policy_id           BIGINT,
+--       rule_code           VARCHAR(128) NOT NULL UNIQUE,
+--       context_key         VARCHAR(128) NOT NULL,
+--       source_type         VARCHAR(64) NOT NULL,
+--       scope_level         VARCHAR(32) NOT NULL DEFAULT 'global',
+--       applies_scope_json  JSONB NOT NULL DEFAULT '{}'::JSONB,
+--       extractor_json      JSONB NOT NULL DEFAULT '{}'::JSONB,
+--       default_value_json  JSONB,
+--       normalize_package   VARCHAR(256),
+--       normalize_rule      VARCHAR(128),
+--       fail_strategy       VARCHAR(32) NOT NULL DEFAULT 'use_default',
+--       priority            INTEGER NOT NULL DEFAULT 100,
+--       enabled             BOOLEAN NOT NULL DEFAULT TRUE,
+--       description         TEXT,
+--       create_time         BIGINT NOT NULL,
+--       update_time         BIGINT NOT NULL,
+--       CONSTRAINT ck_env_rule_source_type
+--           CHECK (source_type IN ('request_header', 'jwt_claim', 'request_param', 'fixed', 'http', 'sql')),
+--       CONSTRAINT ck_env_rule_scope_level
+--           CHECK (scope_level IN ('global', 'tenant', 'resource')),
+--       CONSTRAINT ck_env_rule_fail_strategy
+--           CHECK (fail_strategy IN ('deny', 'use_default', 'skip'))
+-- );
 
 -- Append-only administrative audit trail for policy edits and config generation.
 CREATE TABLE IF NOT EXISTS test.abac_audit_logs (

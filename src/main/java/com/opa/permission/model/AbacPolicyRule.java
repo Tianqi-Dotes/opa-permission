@@ -14,7 +14,7 @@ import java.util.Map;
 public class AbacPolicyRule {
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
-    private Long configId;
+    private Long policyId;
     private String ruleCode;
     private String ruleName;
     private String effect;

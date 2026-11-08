@@ -14,6 +14,7 @@ import java.util.Map;
 public class EnvironmentContextRule {
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
+    private Long policyId;
     private String ruleCode;
     private String contextKey;
     private String sourceType;

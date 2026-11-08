@@ -20,7 +20,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/abac/resource-attributes")
@@ -52,7 +55,29 @@ public class ResourceAttributeValueController {
             query.eq("attribute_id", attributeId);
         }
         query.orderByAsc("resource_id", "attribute_id", "id");
-        return ResponseEntity.ok(resourceAttributeValueService.list(query));
+        List<ResourceAttributeValue> values = resourceAttributeValueService.list(query);
+        List<Long> resourceIds = values.stream()
+                .map(ResourceAttributeValue::getResourceId)
+                .filter(id -> id != null)
+                .distinct()
+                .toList();
+        Map<Long, String> resourceCodes = new HashMap<>();
+        if (!resourceIds.isEmpty()) {
+            for (AbacResource resource : abacResourceService.listByIds(resourceIds)) {
+                resourceCodes.put(resource.getId(), resource.getResourceCode());
+            }
+        }
+        return ResponseEntity.ok(values.stream()
+                .map(value -> new ResourceAttributeValueResponse(
+                        value.getId(),
+                        value.getResourceId(),
+                        resourceCodes.get(value.getResourceId()),
+                        value.getAttributeId(),
+                        value.getValueText(),
+                        value.getValueJson(),
+                        value.getCreateTime(),
+                        value.getUpdateTime()))
+                .toList());
     }
 
     @GetMapping("/{id}")
@@ -214,6 +239,11 @@ public class ResourceAttributeValueController {
     }
 
     public record ResourceAttributeValueRequest(Long resourceId, Long attributeId, String valueText) {
+    }
+
+    public record ResourceAttributeValueResponse(Long id, Long resourceId, String resourceCode,
+                                                 Long attributeId, String valueText, Object valueJson,
+                                                 Long createTime, Long updateTime) {
     }
 
     public record ApiError(String message) {

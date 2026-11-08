@@ -95,6 +95,14 @@ const pages = {
         featureDescription: "Table management tools will be available here.",
         symbol: "CT"
     },
+    "create-datasource": {
+        section: "Workspace",
+        title: "Create Datasource",
+        description: "Register a token-authenticated Trino JDBC datasource.",
+        featureTitle: "Trino datasource",
+        featureDescription: "Save a Trino JDBC connection and register its external ABAC resource.",
+        symbol: "DS"
+    },
     "create-bucket": {
         section: "Workspace",
         title: "Create Bucket",
@@ -283,6 +291,12 @@ const createBucketForm = document.querySelector("#create-bucket-form");
 const bucketNameInput = document.querySelector("#bucket-name");
 const createBucketSubmit = document.querySelector("#create-bucket-submit");
 const createBucketStatus = document.querySelector("#create-bucket-status");
+const createDatasourcePanel = document.querySelector("#create-datasource-panel");
+const createDatasourceForm = document.querySelector("#create-datasource-form");
+const datasourceConnectionName = document.querySelector("#datasource-connection-name");
+const datasourceJdbcUrl = document.querySelector("#datasource-jdbc-url");
+const createDatasourceSubmit = document.querySelector("#create-datasource-submit");
+const createDatasourceStatus = document.querySelector("#create-datasource-status");
 
 const apiBaseUrl = (window.API_BASE_URL || "http://localhost:1111").replace(/\/+$/, "");
 const trinoPermissionTests = [
@@ -290,7 +304,8 @@ const trinoPermissionTests = [
     {name: "Execute Trino SQL", path: "/api/trino/execute", body: {sql: ""}},
     {name: "Create Trino Catalog", path: "/api/trino/catalogs", body: {}},
     {name: "Create Trino Schema", path: "/api/trino/schemas", body: {}},
-    {name: "Create Trino Table", path: "/api/trino/tables", body: {}}
+    {name: "Create Trino Table", path: "/api/trino/tables", body: {}},
+    {name: "Create Trino Datasource", path: "/api/trino/connections", body: {}}
 ];
 const permissionTestRows = new Map();
 let permissionTestRunInProgress = false;
@@ -323,6 +338,7 @@ let policyGenerated = false;
 let policyAttributeRequestId = 0;
 let policyResourceRequestId = 0;
 let bucketCreationInProgress = false;
+let datasourceCreationInProgress = false;
 let resourceAttributeDefinitions = [];
 let resourceAttributeListRequestId = 0;
 let resourceAttributeMutationInProgress = false;
@@ -401,13 +417,16 @@ function showPage(pageKey) {
     const isResourceAttributesPage = pageKey === "resource-attributes";
     const isPolicyConfigPage = pageKey === "policy-config";
     const isCreateBucketPage = pageKey === "create-bucket";
+    const isCreateDatasourcePage = pageKey === "create-datasource";
     const isTrinoQueryPage = pageKey === "query-trino";
     featureCard.hidden = isAssignRolesPage || isPermissionTestPage
         || isAttributeDictionaryPage || isAttributeTemplatesPage || isSubjectAttributesPage
-        || isResourceAttributesPage || isPolicyConfigPage || isCreateBucketPage || isTrinoQueryPage;
+        || isResourceAttributesPage || isPolicyConfigPage || isCreateBucketPage
+        || isCreateDatasourcePage || isTrinoQueryPage;
     infoRow.hidden = isAssignRolesPage || isPermissionTestPage
         || isAttributeDictionaryPage || isAttributeTemplatesPage || isSubjectAttributesPage
-        || isResourceAttributesPage || isPolicyConfigPage || isCreateBucketPage || isTrinoQueryPage;
+        || isResourceAttributesPage || isPolicyConfigPage || isCreateBucketPage
+        || isCreateDatasourcePage || isTrinoQueryPage;
     assignRolePanel.hidden = !isAssignRolesPage;
     permissionTestPanel.hidden = !isPermissionTestPage;
     trinoQueryPanel.hidden = !isTrinoQueryPage;
@@ -417,6 +436,7 @@ function showPage(pageKey) {
     resourceAttributesPanel.hidden = !isResourceAttributesPage;
     policyConfigPanel.hidden = !isPolicyConfigPage;
     createBucketPanel.hidden = !isCreateBucketPage;
+    createDatasourcePanel.hidden = !isCreateDatasourcePage;
     if (isAssignRolesPage) {
         loadUsers();
     }
@@ -506,6 +526,42 @@ async function createBucket(event) {
     } finally {
         bucketCreationInProgress = false;
         createBucketSubmit.disabled = false;
+    }
+}
+
+async function createDatasource(event) {
+    event.preventDefault();
+    if (datasourceCreationInProgress || !createDatasourceForm.reportValidity()) {
+        return;
+    }
+
+    const connectionName = datasourceConnectionName.value.trim();
+    const jdbcUrl = datasourceJdbcUrl.value.trim();
+    datasourceCreationInProgress = true;
+    createDatasourceSubmit.disabled = true;
+    createDatasourceStatus.textContent = "Saving Trino datasource...";
+    try {
+        const response = await fetch(`${apiBaseUrl}/api/trino/connections`, {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({connectionName, jdbcUrl})
+        });
+        if (!response.ok) {
+            throw new Error(await getApiError(response));
+        }
+
+        const datasource = await response.json();
+        createDatasourceStatus.textContent =
+            `Datasource "${datasource.connectionName}" saved with resource code ${datasource.resourceCode} using token authentication.`;
+        createDatasourceForm.reset();
+    } catch (error) {
+        createDatasourceStatus.textContent = error.message || "Unable to save the Trino datasource.";
+    } finally {
+        datasourceCreationInProgress = false;
+        createDatasourceSubmit.disabled = false;
     }
 }
 
@@ -2454,7 +2510,7 @@ function renderResourceAttributeValues(values) {
         const definition = resourceAttributeDefinitions.find(
             (item) => String(item.id) === String(value.attributeId));
         const row = document.createElement("tr");
-        [value.id, value.resourceId, definition ? definition.name : `Attribute #${value.attributeId}`,
+        [value.id, value.resourceCode, definition ? definition.name : `Attribute #${value.attributeId}`,
             value.valueText].forEach((cellValue) => {
             const cell = document.createElement("td");
             cell.textContent = cellValue == null ? "" : String(cellValue);
@@ -3006,6 +3062,7 @@ externalResourceTab.addEventListener("click", () => activateResourceScopeTab(ext
     });
 });
 createBucketForm.addEventListener("submit", createBucket);
+createDatasourceForm.addEventListener("submit", createDatasource);
 filterResourceAttributesButton.addEventListener("click", loadResourceAttributeValues);
 refreshInternalResourcesButton.addEventListener("click", () => loadResourceList("internal"));
 refreshExternalResourcesButton.addEventListener("click", () => loadResourceList("external"));

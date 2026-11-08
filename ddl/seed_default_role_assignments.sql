@@ -39,6 +39,7 @@ WITH missing_role_permissions AS (
             AND p.permission_name IN (
                 'Query Trino',
                 'Execute Trino SQL',
+                'Create Trino Datasource',
                 'Create Trino Catalog',
                 'Create Trino Schema',
                 'Create Trino Table',

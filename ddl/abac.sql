@@ -20,6 +20,22 @@ CREATE TABLE IF NOT EXISTS test.resources (
 CREATE INDEX IF NOT EXISTS idx_resources_parent_resource_id
     ON test.resources (parent_resource_id);
 
+-- Stores Trino JDBC connection metadata; the caller's short-lived token is supplied at runtime.
+CREATE TABLE IF NOT EXISTS test.trino_connections (
+    id              BIGSERIAL PRIMARY KEY,
+    resource_id     BIGINT NOT NULL UNIQUE,
+    jdbc_url        TEXT NOT NULL,
+    auth_type       VARCHAR(32) NOT NULL DEFAULT 'TOKEN',
+    status          VARCHAR(32) NOT NULL DEFAULT 'active',
+    create_time     BIGINT NOT NULL,
+    update_time     BIGINT NOT NULL,
+    CONSTRAINT ck_trino_connections_auth_type
+        CHECK (auth_type = 'TOKEN'),
+    CONSTRAINT ck_trino_connections_status
+        CHECK (status IN ('active', 'disabled'))
+);
+
+
 -- 2) Attribute model
 -- Purpose: Central dictionary of ABAC attribute keys and types.
 -- category:subject,NAME:TENANT,data_type:string

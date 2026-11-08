@@ -421,6 +421,7 @@ button {
 .assign-role-panel[hidden],
 .trino-query-panel[hidden],
 .create-bucket-panel[hidden],
+.create-datasource-panel[hidden],
 .attribute-dictionary-panel[hidden],
 .resource-scope-panel[hidden],
 .policy-config-panel[hidden],
@@ -439,7 +440,8 @@ button {
 
 .assign-role-panel,
 .trino-query-panel,
-.create-bucket-panel {
+.create-bucket-panel,
+.create-datasource-panel {
     margin-top: 18px;
     padding: 23px;
     border: 1px solid #e9edf4;
@@ -1707,7 +1709,8 @@ button {
 
     .assign-role-panel,
     .trino-query-panel,
-    .create-bucket-panel {
+    .create-bucket-panel,
+    .create-datasource-panel {
         padding: 18px;
     }
 

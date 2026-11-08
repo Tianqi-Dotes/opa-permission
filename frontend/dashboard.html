@@ -80,6 +80,10 @@
                         <span class="nav-icon" aria-hidden="true">CT</span>
                         <span>Create Trino Table</span>
                     </button>
+                    <button class="nav-item" type="button" data-page="create-datasource">
+                        <span class="nav-icon" aria-hidden="true">DS</span>
+                        <span>Create Datasource</span>
+                    </button>
                     <button class="nav-item" type="button" data-page="create-bucket">
                         <span class="nav-icon" aria-hidden="true">CB</span>
                         <span>Create Bucket</span>
@@ -508,6 +512,42 @@
                 </p>
             </section>
 
+            <section class="create-datasource-panel" id="create-datasource-panel" hidden
+                     aria-labelledby="create-datasource-title">
+                <div class="assign-role-header">
+                    <div>
+                        <h2 id="create-datasource-title">Create a Trino datasource</h2>
+                        <p>The datasource will be registered as an external ABAC resource for your tenant.</p>
+                    </div>
+                </div>
+                <form id="create-datasource-form">
+                    <label class="form-field" for="datasource-connection-name">
+                        <span>Datasource name</span>
+                        <input id="datasource-connection-name" name="connectionName" type="text"
+                               maxlength="128" pattern="[A-Za-z0-9][A-Za-z0-9._-]{0,127}"
+                               autocomplete="off" required>
+                    </label>
+                    <label class="form-field" for="datasource-jdbc-url">
+                        <span>Trino JDBC URL</span>
+                        <input id="datasource-jdbc-url" name="jdbcUrl" type="text" maxlength="2048"
+                               placeholder="jdbc:trino://host:8443?SSL=true" autocomplete="off" required>
+                    </label>
+                    <label class="form-field" for="datasource-auth-type">
+                        <span>Authentication</span>
+                        <input id="datasource-auth-type" type="text" value="Token" readonly>
+                    </label>
+                    <p class="assign-role-status">
+                        Token authentication is required. The bearer token is supplied at runtime and is not stored.
+                    </p>
+                    <button class="primary-button" id="create-datasource-submit" type="submit">
+                        Create Datasource
+                    </button>
+                </form>
+                <p class="assign-role-status" id="create-datasource-status" role="status" aria-live="polite">
+                    Enter a name and a TLS-enabled Trino JDBC URL.
+                </p>
+            </section>
+
             <section class="attribute-dictionary-panel" id="resource-attributes-panel" hidden
                      aria-labelledby="resource-attributes-title">
                 <div class="attribute-dictionary-header">
@@ -639,7 +679,7 @@
                         <thead>
                         <tr>
                             <th scope="col">ID</th>
-                            <th scope="col">Resource ID</th>
+                            <th scope="col">Resource Code</th>
                             <th scope="col">Attribute</th>
                             <th scope="col">Value</th>
                             <th scope="col"><span class="visually-hidden">Actions</span></th>

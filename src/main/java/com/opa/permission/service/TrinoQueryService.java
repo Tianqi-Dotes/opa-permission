@@ -98,8 +98,8 @@ public class TrinoQueryService {
             return new SqlExecutionResult(false, List.of(), List.of(), false,
                     updateCount >= 0 ? updateCount : null);
         } catch (SQLException exception) {
-            log.error("Trino SQL execution failed (SQLState: {})", exception.getSQLState());
-            throw new TrinoQueryException("Trino SQL execution failed", exception);
+            log.error("Trino SQL execution failed (SQLState: {}), exception msg:{}", exception.getSQLState(), exception.getMessage());
+            throw new TrinoQueryException("Trino SQL execution failed:"+exception.getMessage(), exception);
         }
     }
 

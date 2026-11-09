@@ -14,6 +14,8 @@ public class UserAccount {
     private String passwordHash;
     private Long tenantId;
     private String groupName;
+    private Integer clearance;
+    private String region;
     private String status;
     private Long createdTime;
     private Long updatedTime;

@@ -60,10 +60,13 @@ CREATE TABLE IF NOT EXISTS test.users (
     password_hash           VARCHAR(255) NOT NULL,
     tenant_id               BIGINT NOT NULL,
     group_name              VARCHAR(256),
+    clearance               INTEGER,
+    region                  VARCHAR(128),
     status                  VARCHAR(32) NOT NULL DEFAULT 'active',
     created_time            BIGINT NOT NULL,
     updated_time            BIGINT NOT NULL
 );
+
 
 create table if not exists test.tenants (
     tenant_id               BIGINT PRIMARY KEY,

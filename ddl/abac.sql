@@ -86,6 +86,7 @@ INSERT INTO test.attribute_definitions (
 ) VALUES
     ('tenant_id', 'subject', 'number', FALSE, TRUE, 'Owning tenant identifier; managed by the platform.', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
     ('clearance', 'subject', 'number', FALSE, TRUE, 'Subject clearance level used by ABAC policies.', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
+    ('region', 'subject', 'string', FALSE, TRUE, 'Subject region used by ABAC policies.', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
     ('groups', 'subject', 'string', TRUE, TRUE, 'Subject group memberships; sourced from the identity system.', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
     ('roles', 'subject', 'string', TRUE, TRUE, 'Effective roles derived from RBAC assignments.', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
     ('tenant_id', 'resource', 'number', FALSE, TRUE, 'Owning tenant identifier; managed by the platform.', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),

@@ -714,7 +714,7 @@
                 <div class="policy-config-header">
                     <div>
                         <h2 id="policy-config-title">ABAC policy configuration</h2>
-                        <p>Configure a resource scope, request context, and the decisions applied to matching requests.</p>
+                        <p>Configure a resource scope and the decisions applied to matching requests.</p>
                     </div>
                     <div class="policy-config-actions">
                         <button class="secondary-button" id="validate-policy-config" type="button">Validate</button>
@@ -722,8 +722,8 @@
                     </div>
                 </div>
                 <p class="policy-config-notice">
-                    Single-tenant prototype. Resource and attribute catalogs use existing APIs; environment mappings,
-                    policy rules, and generated artifacts are local drafts and are not saved yet.
+                    Single-tenant prototype. Resource and attribute catalogs use existing APIs; policy rules, static
+                    data, and generated artifacts are local drafts and are not saved to the backend.
                 </p>
 
                 <div class="policy-config-meta policy-config-meta-compact">
@@ -748,8 +748,8 @@
                         <strong id="policy-enabled-rules">0</strong>
                     </div>
                     <div class="policy-summary-card">
-                        <span>Environment mappings</span>
-                        <strong id="policy-effect-counts">0 / 0</strong>
+                        <span>Subject / resource attributes</span>
+                        <strong id="policy-attribute-counts">0 / 0</strong>
                     </div>
                     <div class="policy-summary-card">
                         <span>Draft status</span>
@@ -803,46 +803,16 @@
                     </div>
                 </section>
 
-                <section class="policy-step-panel" aria-labelledby="policy-environment-title">
+                <section class="policy-step-panel" aria-labelledby="policy-rules-title">
                     <div class="policy-step-heading">
                         <span class="policy-step-number">2</span>
                         <div>
-                            <h3 id="policy-environment-title">Configure environment context</h3>
-                            <p>Optionally map request context values into environment attributes used by the policy.</p>
-                        </div>
-                    </div>
-                    <label class="policy-toggle-field">
-                        <input id="policy-environment-enabled" type="checkbox">
-                        <span>Use environment attributes for this policy</span>
-                    </label>
-                    <div class="policy-environment-settings" id="policy-environment-settings" hidden>
-                        <div class="policy-section-header">
-                            <div>
-                                <h4>Environment mappings</h4>
-                                <p>Choose an environment attribute and the request-context path that supplies its value.</p>
-                            </div>
-                            <button class="secondary-button" id="add-policy-environment-rule" type="button">
-                                Add mapping
-                            </button>
-                        </div>
-                        <div class="policy-environment-rule-list" id="policy-environment-rule-list"></div>
-                        <p class="policy-catalog-note">
-                            Example source paths: request.client_ip or request.time.hour. The extraction endpoint will
-                            be connected later.
-                        </p>
-                    </div>
-                </section>
-
-                <section class="policy-step-panel" aria-labelledby="policy-rules-title">
-                    <div class="policy-step-heading">
-                        <span class="policy-step-number">3</span>
-                        <div>
                             <h3 id="policy-rules-title">Define subject and resource rules</h3>
-                            <p>Conditions can reference subject/resource attributes and, when enabled, environment attributes.</p>
+                            <p>Build conditions from subject and resource attributes in the attribute dictionary.</p>
                         </div>
                     </div>
                     <p class="policy-decision-note">
-                        The first matching rule by ascending priority wins. If no rule matches, access is denied.
+                        Rules are evaluated in the order shown; the first matching rule wins. If no rule matches, access is denied.
                         Row filtering and column masking are returned as structured decisions for the data layer to enforce.
                     </p>
                     <div class="policy-rule-workspace">
@@ -871,17 +841,13 @@
                             <div class="policy-section-header">
                                 <div>
                                     <h4 id="policy-editor-title">Rule editor</h4>
-                                    <p>Build the match conditions and decision for this rule.</p>
+                                    <p>Build the match conditions and decision; the rule code is generated automatically.</p>
                                 </div>
                             </div>
                             <div class="policy-rule-fields">
                                 <label class="form-field">
                                     <span>Rule name</span>
                                     <input id="policy-rule-name" maxlength="256" required>
-                                </label>
-                                <label class="form-field">
-                                    <span>Rule code</span>
-                                    <input id="policy-rule-code" maxlength="128" required>
                                 </label>
                                 <label class="form-field">
                                     <span>Decision</span>
@@ -892,20 +858,9 @@
                                         <option value="column_masking">Column masking</option>
                                     </select>
                                 </label>
-                                <label class="form-field">
-                                    <span>Priority</span>
-                                    <input id="policy-rule-priority" type="number" min="1" step="1" value="100" required>
-                                </label>
                                 <label class="policy-enabled-field">
                                     <input id="policy-rule-enabled" type="checkbox" checked>
                                     <span>Rule enabled</span>
-                                </label>
-                                <label class="form-field">
-                                    <span>Conditions match</span>
-                                    <select id="policy-rule-match-mode">
-                                        <option value="all">All conditions (AND)</option>
-                                        <option value="any">Any condition (OR)</option>
-                                    </select>
                                 </label>
                             </div>
 
@@ -940,7 +895,7 @@
                             <div class="policy-condition-header">
                                 <div>
                                     <h4>Conditions</h4>
-                                    <p>Select subject/resource attributes; environment attributes are available when enabled.</p>
+                                    <p>Choose a subject dictionary attribute on the left and a resource attribute or fixed value on the right.</p>
                                 </div>
                                 <button class="secondary-button" id="add-policy-condition" type="button">
                                     Add condition
@@ -959,10 +914,10 @@
 
                 <section class="policy-step-panel" aria-labelledby="policy-static-data-title">
                     <div class="policy-step-heading">
-                        <span class="policy-step-number">4</span>
+                        <span class="policy-step-number">3</span>
                         <div>
                             <h3 id="policy-static-data-title">Configure static policy data</h3>
-                            <p>Only include data that is intentionally packaged with the policy bundle.</p>
+                            <p>Preview local static data only. This section does not load from or save to the backend.</p>
                         </div>
                     </div>
                     <label class="policy-toggle-field">
@@ -976,7 +931,7 @@
                 </section>
 
                 <div class="policy-step-heading policy-output-heading">
-                    <span class="policy-step-number">5</span>
+                    <span class="policy-step-number">4</span>
                     <div>
                         <h3>Generate and review policy artifacts</h3>
                         <p>Preview the rule file and optional static data file before connecting save/publish APIs.</p>
@@ -1005,10 +960,6 @@
                         <div class="policy-data-preview-panel">
                             <h4>data.json preview</h4>
                             <pre class="policy-rego-code" id="policy-data-preview">No static data configured; data.json will not be generated.</pre>
-                        </div>
-                        <div class="policy-data-preview-panel">
-                            <h4>Environment mapping configuration preview</h4>
-                            <pre class="policy-rego-code" id="policy-environment-preview">Environment context is not enabled.</pre>
                         </div>
                     </section>
                 </div>

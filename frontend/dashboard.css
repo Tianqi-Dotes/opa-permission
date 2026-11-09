@@ -429,7 +429,6 @@ button {
 .policy-config-panel[hidden],
 .policy-rule-form[hidden],
 .policy-empty-editor[hidden],
-.policy-environment-settings[hidden],
 .policy-row-filter-settings[hidden],
 .policy-column-masking-settings[hidden],
 .policy-static-data-editor[hidden],
@@ -859,26 +858,6 @@ button {
     accent-color: #416ee8;
 }
 
-.policy-environment-settings {
-    margin-top: 14px;
-    padding: 14px;
-    border: 1px solid #edf0f5;
-    border-radius: 8px;
-    background: #fbfcfe;
-}
-
-.policy-environment-row {
-    display: grid;
-    grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) auto;
-    align-items: end;
-    gap: 10px;
-    margin-top: 10px;
-    padding: 11px;
-    border: 1px solid #e9edf4;
-    border-radius: 7px;
-    background: #fff;
-}
-
 .policy-decision-note {
     margin: -4px 0 12px;
     padding: 9px 11px;
@@ -1168,7 +1147,8 @@ button {
 
 .policy-condition-row {
     display: grid;
-    grid-template-columns: minmax(170px, 1.3fr) minmax(145px, 1fr) minmax(170px, 1.3fr) auto;
+    grid-template-columns: minmax(155px, 1.2fr) minmax(115px, .8fr)
+        minmax(130px, .9fr) minmax(150px, 1.2fr) minmax(150px, 1.2fr) auto;
     align-items: end;
     gap: 9px;
     padding: 11px;
@@ -1724,7 +1704,6 @@ button {
     .policy-output-grid,
     .policy-attribute-catalogs,
     .policy-resource-picker,
-    .policy-environment-row,
     .policy-mask-row {
         grid-template-columns: 1fr;
     }

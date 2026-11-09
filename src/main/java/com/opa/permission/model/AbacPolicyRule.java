@@ -18,7 +18,7 @@ public class AbacPolicyRule {
     private String ruleCode;
     private String ruleName;
     private String effect;
-    private Integer priority;
+//    private Integer priority;
     private Boolean enabled;
     @TableField(typeHandler = JacksonTypeHandler.class)
     private Map<String, Object> conditionJson;

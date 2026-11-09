@@ -58,9 +58,9 @@ const pages = {
     "policy-config": {
         section: "ABAC",
         title: "Policy Config",
-        description: "Select a resource, configure request context, and compose access decisions.",
+        description: "Select a resource, configure attribute matching, and compose access decisions.",
         featureTitle: "Policy configuration",
-        featureDescription: "Build resource-scoped policies and preview their generated artifacts.",
+        featureDescription: "Build resource-scoped policies from dictionary attributes and preview generated artifacts.",
         symbol: "PC"
     },
     "playground": {
@@ -216,7 +216,7 @@ const policyConfigName = document.querySelector("#policy-config-name");
 const policyConfigEntrypoint = document.querySelector("#policy-config-entrypoint");
 const policyTotalRules = document.querySelector("#policy-total-rules");
 const policyEnabledRules = document.querySelector("#policy-enabled-rules");
-const policyEffectCounts = document.querySelector("#policy-effect-counts");
+const policyAttributeCounts = document.querySelector("#policy-attribute-counts");
 const policyDraftStatus = document.querySelector("#policy-draft-status");
 const policyResourceSelect = document.querySelector("#policy-resource-select");
 const refreshPolicyResourcesButton = document.querySelector("#refresh-policy-resources");
@@ -225,21 +225,14 @@ const policyResourceSelection = document.querySelector("#policy-resource-selecti
 const policyAttributeCatalogs = document.querySelector("#policy-attribute-catalogs");
 const policyResourceAttributeList = document.querySelector("#policy-resource-attribute-list");
 const policySubjectAttributeList = document.querySelector("#policy-subject-attribute-list");
-const policyEnvironmentEnabled = document.querySelector("#policy-environment-enabled");
-const policyEnvironmentSettings = document.querySelector("#policy-environment-settings");
-const addPolicyEnvironmentRuleButton = document.querySelector("#add-policy-environment-rule");
-const policyEnvironmentRuleList = document.querySelector("#policy-environment-rule-list");
 const policyRuleList = document.querySelector("#policy-rule-list");
 const policyRuleListStatus = document.querySelector("#policy-rule-list-status");
 const addPolicyRuleButton = document.querySelector("#add-policy-rule");
 const policyEmptyEditor = document.querySelector("#policy-empty-editor");
 const policyRuleForm = document.querySelector("#policy-rule-form");
 const policyRuleName = document.querySelector("#policy-rule-name");
-const policyRuleCode = document.querySelector("#policy-rule-code");
 const policyRuleEffect = document.querySelector("#policy-rule-effect");
-const policyRulePriority = document.querySelector("#policy-rule-priority");
 const policyRuleEnabled = document.querySelector("#policy-rule-enabled");
-const policyRuleMatchMode = document.querySelector("#policy-rule-match-mode");
 const policyConditionList = document.querySelector("#policy-condition-list");
 const addPolicyConditionButton = document.querySelector("#add-policy-condition");
 const policyRowFilterSettings = document.querySelector("#policy-row-filter-settings");
@@ -259,7 +252,6 @@ const policyValidationList = document.querySelector("#policy-validation-list");
 const policyRegoEntrypoint = document.querySelector("#policy-rego-entrypoint");
 const policyRegoPreview = document.querySelector("#policy-rego-preview");
 const policyDataPreview = document.querySelector("#policy-data-preview");
-const policyEnvironmentPreview = document.querySelector("#policy-environment-preview");
 const policyConfigStatus = document.querySelector("#policy-config-status");
 const resourceAttributesPanel = document.querySelector("#resource-attributes-panel");
 const internalResourceTab = document.querySelector("#internal-resource-tab");
@@ -333,7 +325,6 @@ let subjectAttributeMutationInProgress = false;
 let editingSubjectAttributeId = null;
 let policyAttributeDefinitions = [];
 let policyResources = [];
-let policyEnvironmentRules = [];
 let policyRules = [];
 let selectedPolicyRuleId = null;
 let nextPolicyRuleId = 1;
@@ -1107,19 +1098,18 @@ function invalidatePolicyPreview() {
     policyDataPreview.textContent = policyStaticDataEnabled.checked
         ? "Generate artifacts to inspect data.json."
         : "No static data configured; data.json will not be generated.";
-    policyEnvironmentPreview.textContent = policyEnvironmentEnabled.checked
-        ? "Generate artifacts to inspect the environment mapping configuration."
-        : "Environment context is not enabled.";
     policyConfigStatus.textContent = "Local draft has unsaved changes.";
 }
 
 function renderPolicySummary() {
     const enabledRules = policyRules.filter((rule) => rule.enabled);
-    const activeMappings = policyEnvironmentEnabled.checked ? policyEnvironmentRules.length : 0;
+    const subjectAttributeCount = policyAttributeDefinitions
+        .filter((definition) => definition.category === "subject").length;
+    const resourceAttributeCount = policyAttributeDefinitions
+        .filter((definition) => definition.category === "resource").length;
     policyTotalRules.textContent = String(policyRules.length);
     policyEnabledRules.textContent = String(enabledRules.length);
-    policyEffectCounts.textContent =
-        `${activeMappings} active mapping${activeMappings === 1 ? "" : "s"}`;
+    policyAttributeCounts.textContent = `${subjectAttributeCount} / ${resourceAttributeCount}`;
     policyDraftStatus.textContent = policyGenerated ? "Preview ready" : "Not generated";
     policyRegoEntrypoint.textContent = `Entrypoint: ${policyConfigEntrypoint.value.trim() || "—"}`;
 }
@@ -1137,29 +1127,26 @@ function renderPolicyRuleList() {
     }
 
     policyRuleListStatus.textContent = `${policyRules.length} rule${policyRules.length === 1 ? "" : "s"} in this local draft.`;
-    [...policyRules]
-        .sort((left, right) => left.priority - right.priority || left.id - right.id)
-        .forEach((rule) => {
-            const button = document.createElement("button");
-            button.className = "policy-rule-card";
-            button.type = "button";
-            button.dataset.policyRuleId = String(rule.id);
-            button.setAttribute("aria-pressed", String(rule.id === selectedPolicyRuleId));
-            const title = document.createElement("strong");
-            title.textContent = rule.ruleName || "Untitled rule";
-            const code = document.createElement("span");
-            code.className = "policy-rule-code";
-            code.textContent = rule.ruleCode;
-            const meta = document.createElement("span");
-            meta.className = "policy-rule-meta";
-            const decisionLabel = rule.effect === "permit"
-                ? "ALLOW"
-                : rule.effect.replace(/_/g, " ").toUpperCase();
-            meta.textContent =
-                `${decisionLabel} · Priority ${rule.priority} · ${rule.enabled ? "Enabled" : "Disabled"}`;
-            button.append(title, code, meta);
-            policyRuleList.append(button);
-        });
+    policyRules.forEach((rule) => {
+        const button = document.createElement("button");
+        button.className = "policy-rule-card";
+        button.type = "button";
+        button.dataset.policyRuleId = String(rule.id);
+        button.setAttribute("aria-pressed", String(rule.id === selectedPolicyRuleId));
+        const title = document.createElement("strong");
+        title.textContent = rule.ruleName || "Untitled rule";
+        const code = document.createElement("span");
+        code.className = "policy-rule-code";
+        code.textContent = rule.ruleCode;
+        const meta = document.createElement("span");
+        meta.className = "policy-rule-meta";
+        const decisionLabel = rule.effect === "permit"
+            ? "ALLOW"
+            : rule.effect.replace(/_/g, " ").toUpperCase();
+        meta.textContent = `${decisionLabel} · ${rule.enabled ? "Enabled" : "Disabled"}`;
+        button.append(title, code, meta);
+        policyRuleList.append(button);
+    });
     renderPolicySummary();
 }
 
@@ -1176,21 +1163,17 @@ function renderPolicyConditionRows() {
         const attributeLabel = document.createElement("label");
         attributeLabel.className = "form-field";
         const attributeCaption = document.createElement("span");
-        attributeCaption.textContent = "Attribute";
+        attributeCaption.textContent = "Subject attribute";
         const attributeSelect = document.createElement("select");
         attributeSelect.required = true;
-        attributeSelect.append(new Option("Select an attribute", ""));
+        attributeSelect.append(new Option("Select a subject attribute", ""));
         policyAttributeDefinitions
-            .filter((definition) => definition.category === "subject"
-                || definition.category === "resource"
-                || (policyEnvironmentEnabled.checked && definition.category === "environment"))
+            .filter((definition) => definition.category === "subject")
             .forEach((definition) => {
-                const path = `${definition.category}.${definition.name}`;
-                const option = new Option(
-                    `${definition.category} · ${definition.name} (${definition.dataType})`,
-                    path
-                );
-                attributeSelect.append(option);
+                attributeSelect.append(new Option(
+                    `${definition.name} (${definition.dataType})`,
+                    `subject.${definition.name}`
+                ));
             });
         attributeSelect.value = condition.attribute;
         attributeSelect.addEventListener("change", () => {
@@ -1208,10 +1191,38 @@ function renderPolicyConditionRows() {
             operatorSelect.append(new Option(label, value));
         });
         operatorSelect.value = condition.operator;
+
+        const valueTypeLabel = document.createElement("label");
+        valueTypeLabel.className = "form-field";
+        const valueTypeCaption = document.createElement("span");
+        valueTypeCaption.textContent = "Right side";
+        const valueTypeSelect = document.createElement("select");
+        valueTypeSelect.append(
+            new Option("Fixed value", "constant"),
+            new Option("Resource attribute", "resource")
+        );
+        valueTypeSelect.value = condition.valueType;
+        valueTypeLabel.append(valueTypeCaption, valueTypeSelect);
+
+        const resourceAttributeLabel = document.createElement("label");
+        resourceAttributeLabel.className = "form-field";
+        const resourceAttributeCaption = document.createElement("span");
+        resourceAttributeCaption.textContent = "Resource attribute";
+        const resourceAttributeSelect = document.createElement("select");
+        resourceAttributeSelect.append(new Option("Select a resource attribute", ""));
+        policyAttributeDefinitions
+            .filter((definition) => definition.category === "resource")
+            .forEach((definition) => resourceAttributeSelect.append(new Option(
+                `${definition.name} (${definition.dataType})`,
+                `resource.${definition.name}`
+            )));
+        resourceAttributeSelect.value = condition.valueAttribute;
+        resourceAttributeLabel.append(resourceAttributeCaption, resourceAttributeSelect);
+
         const valueLabel = document.createElement("label");
         valueLabel.className = "form-field policy-condition-value";
         const valueCaption = document.createElement("span");
-        valueCaption.textContent = "Value (JSON or text)";
+        valueCaption.textContent = "Fixed value (JSON or text)";
         const valueInput = document.createElement("input");
         valueInput.type = "text";
         valueInput.placeholder = '"finance", 5, true, or ["read", "write"]';
@@ -1226,14 +1237,33 @@ function renderPolicyConditionRows() {
 
         operatorSelect.addEventListener("change", () => {
             condition.operator = operatorSelect.value;
-            valueLabel.hidden = condition.operator === "exists";
+            updateValueVisibility();
+            invalidatePolicyPreview();
+        });
+        valueTypeSelect.addEventListener("change", () => {
+            condition.valueType = valueTypeSelect.value;
+            renderPolicyConditionRows();
+            invalidatePolicyPreview();
+        });
+        resourceAttributeSelect.addEventListener("change", () => {
+            condition.valueAttribute = resourceAttributeSelect.value;
             invalidatePolicyPreview();
         });
         valueInput.addEventListener("input", () => {
             condition.valueText = valueInput.value;
             invalidatePolicyPreview();
         });
-        valueLabel.hidden = condition.operator === "exists";
+
+        function updateValueVisibility() {
+            const operatorHasValue = condition.operator !== "exists";
+            valueTypeLabel.hidden = !operatorHasValue;
+            resourceAttributeLabel.hidden = !operatorHasValue || condition.valueType !== "resource";
+            valueLabel.hidden = !operatorHasValue || condition.valueType !== "constant";
+            resourceAttributeSelect.required =
+                operatorHasValue && condition.valueType === "resource";
+            valueInput.required = operatorHasValue && condition.valueType === "constant";
+        }
+        updateValueVisibility();
         removeButton.addEventListener("click", () => {
             editingPolicyConditions.splice(index, 1);
             renderPolicyConditionRows();
@@ -1241,7 +1271,7 @@ function renderPolicyConditionRows() {
         });
 
         operatorLabel.append(operatorCaption, operatorSelect);
-        row.append(attributeLabel, operatorLabel, valueLabel, removeButton);
+        row.append(attributeLabel, operatorLabel, valueTypeLabel, resourceAttributeLabel, valueLabel, removeButton);
         policyConditionList.append(row);
     });
 }
@@ -1259,11 +1289,8 @@ function renderPolicyRuleEditor(rule) {
     addPolicyConditionButton.disabled = false;
     deletePolicyRuleButton.disabled = false;
     policyRuleName.value = rule.ruleName;
-    policyRuleCode.value = rule.ruleCode;
     policyRuleEffect.value = rule.effect;
-    policyRulePriority.value = String(rule.priority);
     policyRuleEnabled.checked = Boolean(rule.enabled);
-    policyRuleMatchMode.value = rule.matchMode;
     editingPolicyConditions = rule.conditions.map((condition) => ({...condition}));
     editingPolicyMasking = (rule.masking || []).map((item) => ({...item}));
     policyEditorStatus.textContent = "";
@@ -1296,12 +1323,12 @@ function addPolicyRule() {
         ruleCode: `rule_${id}`,
         ruleName: `New rule ${id}`,
         effect: "permit",
-        priority: id * 10,
         enabled: true,
-        matchMode: "all",
         conditions: [{
             attribute: "",
             operator: "eq",
+            valueType: "constant",
+            valueAttribute: "",
             valueText: ""
         }],
         rowFilter: {attribute: "", operator: "eq", valueText: ""},
@@ -1323,31 +1350,10 @@ function applyPolicyRuleChanges() {
     if (!policyRuleForm.reportValidity()) {
         return false;
     }
-    const ruleCode = policyRuleCode.value.trim();
-    if (!/^[A-Za-z][A-Za-z0-9_]{0,127}$/.test(ruleCode)) {
-        policyEditorStatus.textContent = "Rule code must start with a letter and contain only letters, numbers, and underscores.";
-        policyRuleCode.focus();
-        return false;
-    }
-    if (policyRules.some((candidate) => candidate.id !== rule.id
-            && candidate.ruleCode.toLowerCase() === ruleCode.toLowerCase())) {
-        policyEditorStatus.textContent = "Rule code must be unique.";
-        policyRuleCode.focus();
-        return false;
-    }
-    const priority = Number(policyRulePriority.value);
-    if (!Number.isSafeInteger(priority) || priority < 1) {
-        policyEditorStatus.textContent = "Priority must be a positive integer.";
-        policyRulePriority.focus();
-        return false;
-    }
 
     rule.ruleName = policyRuleName.value.trim();
-    rule.ruleCode = ruleCode;
     rule.effect = policyRuleEffect.value;
-    rule.priority = priority;
     rule.enabled = policyRuleEnabled.checked;
-    rule.matchMode = policyRuleMatchMode.value;
     rule.conditions = editingPolicyConditions.map((condition) => ({...condition}));
     rule.rowFilter = {
         attribute: policyRowFilterAttribute.value,
@@ -1402,26 +1408,6 @@ function validatePolicyConfiguration() {
     if (!/^data\.[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*\.decision$/.test(entrypoint)) {
         errors.push("Entrypoint must look like data.package.decision.");
     }
-    if (policyEnvironmentEnabled.checked) {
-        if (policyEnvironmentRules.length === 0) {
-            errors.push("Add at least one environment mapping or turn off environment context.");
-        }
-        const mappedAttributeIds = new Set();
-        policyEnvironmentRules.forEach((mapping, index) => {
-            const exists = policyAttributeDefinitions.some((definition) =>
-                definition.category === "environment" && String(definition.id) === mapping.attributeId);
-            if (!exists) {
-                errors.push(`Environment mapping ${index + 1}: select a known environment attribute.`);
-            }
-            if (!mapping.source.trim()) {
-                errors.push(`Environment mapping ${index + 1}: request source path is required.`);
-            }
-            if (mappedAttributeIds.has(mapping.attributeId)) {
-                errors.push(`Environment mapping ${index + 1}: an attribute may only be mapped once.`);
-            }
-            mappedAttributeIds.add(mapping.attributeId);
-        });
-    }
     if (policyRules.length === 0) {
         errors.push("Add at least one rule.");
     }
@@ -1429,45 +1415,43 @@ function validatePolicyConfiguration() {
         errors.push("Enable at least one rule.");
     }
 
-    const seenCodes = new Set();
     policyRules.forEach((rule) => {
-        const normalizedCode = rule.ruleCode.trim().toLowerCase();
-        if (seenCodes.has(normalizedCode)) {
-            errors.push(`Rule code "${rule.ruleCode}" is duplicated.`);
-        }
-        seenCodes.add(normalizedCode);
         if (!rule.enabled) {
             return;
         }
         if (!rule.ruleName.trim()) {
             errors.push(`${rule.ruleCode}: rule name is required.`);
         }
-        if (!/^[A-Za-z][A-Za-z0-9_]{0,127}$/.test(rule.ruleCode)) {
-            errors.push(`${rule.ruleCode || "Rule"}: rule code is invalid.`);
-        }
-        if (!Number.isSafeInteger(Number(rule.priority)) || Number(rule.priority) < 1) {
-            errors.push(`${rule.ruleCode}: priority must be a positive integer.`);
-        }
         if (rule.conditions.length === 0) {
             errors.push(`${rule.ruleCode}: add at least one condition.`);
         }
         rule.conditions.forEach((condition, index) => {
-            const definition = policyAttributeDefinitions.find((candidate) =>
-                `${candidate.category}.${candidate.name}` === condition.attribute);
-            const supportedCategory = definition
-                && (definition.category === "subject"
-                    || definition.category === "resource"
-                    || (policyEnvironmentEnabled.checked && definition.category === "environment"));
-            if (!supportedCategory) {
-                errors.push(`${rule.ruleCode}, condition ${index + 1}: select an available subject, resource, or environment attribute.`);
+            const subjectAttributeExists = policyAttributeDefinitions.some((definition) =>
+                definition.category === "subject"
+                && `subject.${definition.name}` === condition.attribute);
+            if (!subjectAttributeExists) {
+                errors.push(`${rule.ruleCode}, condition ${index + 1}: select a subject dictionary attribute.`);
             }
-            try {
-                const value = parsePolicyConditionValue(condition);
-                if (condition.operator === "in" && !Array.isArray(value)) {
-                    errors.push(`${rule.ruleCode}, condition ${index + 1}: Is in list requires a JSON array.`);
+            if (condition.operator !== "exists") {
+                if (condition.valueType === "resource") {
+                    const resourceAttributeExists = policyAttributeDefinitions.some((definition) =>
+                        definition.category === "resource"
+                        && `resource.${definition.name}` === condition.valueAttribute);
+                    if (!resourceAttributeExists) {
+                        errors.push(`${rule.ruleCode}, condition ${index + 1}: select a resource dictionary attribute.`);
+                    }
+                } else if (condition.valueType === "constant") {
+                    try {
+                        const value = parsePolicyConditionValue(condition);
+                        if (condition.operator === "in" && !Array.isArray(value)) {
+                            errors.push(`${rule.ruleCode}, condition ${index + 1}: Is in list requires a JSON array.`);
+                        }
+                    } catch (error) {
+                        errors.push(`${rule.ruleCode}, condition ${index + 1}: ${error.message}`);
+                    }
+                } else {
+                    errors.push(`${rule.ruleCode}, condition ${index + 1}: choose a resource attribute or fixed value.`);
                 }
-            } catch (error) {
-                errors.push(`${rule.ruleCode}, condition ${index + 1}: ${error.message}`);
             }
         });
         if (rule.effect === "row_filtering") {
@@ -1530,7 +1514,9 @@ function regoCondition(condition) {
     if (condition.operator === "exists") {
         return `${reference} != null`;
     }
-    const value = JSON.stringify(parsePolicyConditionValue(condition));
+    const value = condition.valueType === "resource"
+        ? regoReference(condition.valueAttribute)
+        : JSON.stringify(parsePolicyConditionValue(condition));
     const operators = {
         eq: "==",
         neq: "!=",
@@ -1548,26 +1534,18 @@ function regoCondition(condition) {
 function ruleConditions(rule, index, resourceScopeCondition) {
     const name = `rule_match_${index + 1}`;
     const conditions = rule.conditions.map(regoCondition);
-    const lines = [];
-    if (rule.matchMode === "any") {
-        conditions.forEach((condition) => {
-            lines.push(`${name} if {`, `    ${resourceScopeCondition}`, `    ${condition}`, "}");
-        });
-    } else {
-        lines.push(
-            `${name} if {`,
-            `    ${resourceScopeCondition}`,
-            ...conditions.map((condition) => `    ${condition}`),
-            "}"
-        );
-    }
+    const lines = [
+        `${name} if {`,
+        `    ${resourceScopeCondition}`,
+        ...conditions.map((condition) => `    ${condition}`),
+        "}"
+    ];
     return {name, lines};
 }
 
 function generatePolicyRego() {
     const enabledRules = policyRules
-        .filter((rule) => rule.enabled)
-        .sort((left, right) => left.priority - right.priority || left.id - right.id);
+        .filter((rule) => rule.enabled);
     const packageSegments = policyConfigEntrypoint.value.trim().split(".").slice(1, -1);
     const resource = policyResources.find(
         (candidate) => String(candidate.id) === policyResourceSelect.value);
@@ -1658,27 +1636,9 @@ function generatePolicyPreview() {
     } else {
         policyDataPreview.textContent = "No static data configured; data.json will not be generated.";
     }
-    if (policyEnvironmentEnabled.checked) {
-        policyEnvironmentPreview.textContent = JSON.stringify(
-            policyEnvironmentRules.map((mapping) => {
-                const definition = policyAttributeDefinitions.find(
-                    (item) => String(item.id) === mapping.attributeId
-                );
-                return {
-                    attributeId: mapping.attributeId,
-                    attribute: `${definition.category}.${definition.name}`,
-                    source: mapping.source.trim()
-                };
-            }),
-            null,
-            2
-        );
-    } else {
-        policyEnvironmentPreview.textContent = "Environment context is not enabled.";
-    }
     policyGenerated = true;
     policyConfigStatus.textContent =
-        "Policy, optional data, and environment mapping previews generated locally. They have not been saved or published.";
+        "Policy and optional static data previews generated locally. They have not been saved or published.";
     renderPolicySummary();
 }
 
@@ -1701,7 +1661,7 @@ async function loadPolicyAttributeDefinitions() {
         }
         policyAttributeDefinitions = definitions;
         renderPolicyAttributeCatalogs();
-        renderPolicyEnvironmentRules();
+        renderPolicySummary();
         const rule = selectedPolicyRule();
         if (rule) {
             renderPolicyConditionRows();
@@ -1842,65 +1802,6 @@ function renderPolicyAttributeCatalogs() {
         policyAttributeDefinitions.filter((definition) => definition.category === "subject"),
         "No subject attributes are defined."
     );
-}
-
-function renderPolicyEnvironmentRules() {
-    policyEnvironmentSettings.hidden = !policyEnvironmentEnabled.checked;
-    policyEnvironmentRuleList.replaceChildren();
-    policyEnvironmentRules.forEach((mapping, index) => {
-        const row = document.createElement("div");
-        row.className = "policy-environment-row";
-
-        const attributeLabel = document.createElement("label");
-        attributeLabel.className = "form-field";
-        const attributeCaption = document.createElement("span");
-        attributeCaption.textContent = "Environment attribute";
-        const attributeSelect = document.createElement("select");
-        attributeSelect.required = policyEnvironmentEnabled.checked;
-        attributeSelect.append(new Option("Select an attribute", ""));
-        policyAttributeDefinitions
-            .filter((definition) => definition.category === "environment")
-            .forEach((definition) => attributeSelect.append(new Option(
-                `${definition.name} (${definition.dataType})`,
-                String(definition.id)
-            )));
-        attributeSelect.value = mapping.attributeId;
-        attributeSelect.addEventListener("change", () => {
-            mapping.attributeId = attributeSelect.value;
-            invalidatePolicyPreview();
-            renderPolicySummary();
-        });
-        attributeLabel.append(attributeCaption, attributeSelect);
-
-        const sourceLabel = document.createElement("label");
-        sourceLabel.className = "form-field";
-        const sourceCaption = document.createElement("span");
-        sourceCaption.textContent = "Request source path";
-        const sourceInput = document.createElement("input");
-        sourceInput.type = "text";
-        sourceInput.required = policyEnvironmentEnabled.checked;
-        sourceInput.placeholder = "request.client_ip";
-        sourceInput.value = mapping.source;
-        sourceInput.addEventListener("input", () => {
-            mapping.source = sourceInput.value;
-            invalidatePolicyPreview();
-        });
-        sourceLabel.append(sourceCaption, sourceInput);
-
-        const removeButton = document.createElement("button");
-        removeButton.className = "secondary-button policy-remove-condition";
-        removeButton.type = "button";
-        removeButton.textContent = "Remove";
-        removeButton.setAttribute("aria-label", `Remove environment mapping ${index + 1}`);
-        removeButton.addEventListener("click", () => {
-            policyEnvironmentRules.splice(index, 1);
-            renderPolicyEnvironmentRules();
-            invalidatePolicyPreview();
-        });
-        row.append(attributeLabel, sourceLabel, removeButton);
-        policyEnvironmentRuleList.append(row);
-    });
-    renderPolicySummary();
 }
 
 function renderPolicyMaskingRows() {
@@ -3198,21 +3099,6 @@ policyResourceSelect.addEventListener("change", () => {
     renderPolicyResourceSelection();
     invalidatePolicyPreview();
 });
-policyEnvironmentEnabled.addEventListener("change", () => {
-    if (policyEnvironmentEnabled.checked && policyEnvironmentRules.length === 0) {
-        policyEnvironmentRules.push({attributeId: "", source: ""});
-    }
-    renderPolicyEnvironmentRules();
-    if (selectedPolicyRule()) {
-        renderPolicyConditionRows();
-    }
-    invalidatePolicyPreview();
-});
-addPolicyEnvironmentRuleButton.addEventListener("click", () => {
-    policyEnvironmentRules.push({attributeId: "", source: ""});
-    renderPolicyEnvironmentRules();
-    invalidatePolicyPreview();
-});
 policyStaticDataEnabled.addEventListener("change", () => {
     policyStaticDataEditor.hidden = !policyStaticDataEnabled.checked;
     invalidatePolicyPreview();
@@ -3247,7 +3133,13 @@ addPolicyConditionButton.addEventListener("click", () => {
     if (!selectedPolicyRule()) {
         return;
     }
-    editingPolicyConditions.push({attribute: "", operator: "eq", valueText: ""});
+    editingPolicyConditions.push({
+        attribute: "",
+        operator: "eq",
+        valueType: "constant",
+        valueAttribute: "",
+        valueText: ""
+    });
     renderPolicyConditionRows();
     invalidatePolicyPreview();
 });

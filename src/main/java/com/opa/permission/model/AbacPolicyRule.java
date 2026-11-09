@@ -15,7 +15,7 @@ public class AbacPolicyRule {
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
     private Long policyId;
-    private String ruleCode;
+//    private String ruleCode;
     private String ruleName;
     private String effect;
 //    private Integer priority;

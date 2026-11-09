@@ -761,7 +761,7 @@ button {
 }
 
 .policy-config-meta.policy-config-meta-compact {
-    grid-template-columns: minmax(200px, 1fr) minmax(240px, 1.2fr);
+    grid-template-columns: minmax(200px, 1fr);
 }
 
 .policy-resource-picker {

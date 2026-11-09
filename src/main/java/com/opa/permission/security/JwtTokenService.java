@@ -39,6 +39,12 @@ public class JwtTokenService {
         if (user.getGroupName() != null) {
             claimsBuilder.claim("group_name", user.getGroupName());
         }
+        if (user.getClearance() != null) {
+            claimsBuilder.claim("clearance", user.getClearance());
+        }
+        if (user.getRegion() != null) {
+            claimsBuilder.claim("region", user.getRegion());
+        }
         if (!user.getRoles().isEmpty()) {
             claimsBuilder.claim("roles", user.getRoles());
         }

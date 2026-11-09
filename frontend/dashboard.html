@@ -731,11 +731,6 @@
                         <span>Configuration name</span>
                         <input id="policy-config-name" value="Default ABAC Policy" maxlength="128" required>
                     </label>
-                    <label class="form-field">
-                        <span>Entrypoint</span>
-                        <input id="policy-config-entrypoint" value="data.opa_permission.decision"
-                               spellcheck="false" required>
-                    </label>
                 </div>
 
                 <div class="policy-config-summary" aria-label="Policy summary">
@@ -953,7 +948,6 @@
                         <div class="policy-section-header">
                             <div>
                                 <h3 id="policy-rego-title">policy.rego preview</h3>
-                                <p id="policy-rego-entrypoint">Entrypoint: data.opa_permission.decision</p>
                             </div>
                         </div>
                         <pre class="policy-rego-code" id="policy-rego-preview">Generate artifacts to inspect the policy rule file.</pre>

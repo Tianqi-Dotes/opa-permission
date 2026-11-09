@@ -213,7 +213,6 @@ const subjectAttributeRows = document.querySelector("#subject-attribute-rows");
 const subjectAttributeStatus = document.querySelector("#subject-attribute-status");
 const policyConfigPanel = document.querySelector("#policy-config-panel");
 const policyConfigName = document.querySelector("#policy-config-name");
-const policyConfigEntrypoint = document.querySelector("#policy-config-entrypoint");
 const policyTotalRules = document.querySelector("#policy-total-rules");
 const policyEnabledRules = document.querySelector("#policy-enabled-rules");
 const policyAttributeCounts = document.querySelector("#policy-attribute-counts");
@@ -249,7 +248,6 @@ const policyStaticDataJson = document.querySelector("#policy-static-data-json");
 const validatePolicyConfigButton = document.querySelector("#validate-policy-config");
 const generatePolicyRegoButton = document.querySelector("#generate-policy-rego");
 const policyValidationList = document.querySelector("#policy-validation-list");
-const policyRegoEntrypoint = document.querySelector("#policy-rego-entrypoint");
 const policyRegoPreview = document.querySelector("#policy-rego-preview");
 const policyDataPreview = document.querySelector("#policy-data-preview");
 const policyConfigStatus = document.querySelector("#policy-config-status");
@@ -1111,7 +1109,6 @@ function renderPolicySummary() {
     policyEnabledRules.textContent = String(enabledRules.length);
     policyAttributeCounts.textContent = `${subjectAttributeCount} / ${resourceAttributeCount}`;
     policyDraftStatus.textContent = policyGenerated ? "Preview ready" : "Not generated";
-    policyRegoEntrypoint.textContent = `Entrypoint: ${policyConfigEntrypoint.value.trim() || "—"}`;
 }
 
 function renderPolicyRuleList() {
@@ -1404,10 +1401,6 @@ function validatePolicyConfiguration() {
     if (!policyResourceSelect.value) {
         errors.push("Select a resource scope.");
     }
-    const entrypoint = policyConfigEntrypoint.value.trim();
-    if (!/^data\.[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*\.decision$/.test(entrypoint)) {
-        errors.push("Entrypoint must look like data.package.decision.");
-    }
     if (policyRules.length === 0) {
         errors.push("Add at least one rule.");
     }
@@ -1546,12 +1539,11 @@ function ruleConditions(rule, index, resourceScopeCondition) {
 function generatePolicyRego() {
     const enabledRules = policyRules
         .filter((rule) => rule.enabled);
-    const packageSegments = policyConfigEntrypoint.value.trim().split(".").slice(1, -1);
     const resource = policyResources.find(
         (candidate) => String(candidate.id) === policyResourceSelect.value);
     const resourceScopeCondition = `input.resource.id == ${JSON.stringify(Number(resource.id))}`;
     const lines = [
-        `package ${packageSegments.join(".")}`,
+        "package opa_permission",
         "",
         "import rego.v1",
         "",
@@ -3145,10 +3137,6 @@ addPolicyConditionButton.addEventListener("click", () => {
 });
 deletePolicyRuleButton.addEventListener("click", deleteSelectedPolicyRule);
 policyConfigName.addEventListener("input", invalidatePolicyPreview);
-policyConfigEntrypoint.addEventListener("input", () => {
-    renderPolicySummary();
-    invalidatePolicyPreview();
-});
 validatePolicyConfigButton.addEventListener("click", validateCurrentPolicyDraft);
 generatePolicyRegoButton.addEventListener("click", generatePolicyPreview);
 defaultTemplateTab.addEventListener("click", () => activateAttributeTemplateTab(defaultTemplateTab));

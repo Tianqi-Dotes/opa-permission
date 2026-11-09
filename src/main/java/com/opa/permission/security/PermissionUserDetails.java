@@ -11,6 +11,8 @@ public class PermissionUserDetails implements UserDetails {
     private final Long userId;
     private final Long tenantId;
     private final String groupName;
+    private final Integer clearance;
+    private final String region;
     private final String username;
     private final String passwordHash;
     private final boolean enabled;
@@ -24,6 +26,8 @@ public class PermissionUserDetails implements UserDetails {
         this.userId = userAccount.getUserId();
         this.tenantId = userAccount.getTenantId();
         this.groupName = userAccount.getGroupName();
+        this.clearance = userAccount.getClearance();
+        this.region = userAccount.getRegion();
         this.username = userAccount.getUsername();
         this.passwordHash = userAccount.getPasswordHash();
         this.enabled = "active".equalsIgnoreCase(userAccount.getStatus());
@@ -40,6 +44,14 @@ public class PermissionUserDetails implements UserDetails {
 
     public String getGroupName() {
         return groupName;
+    }
+
+    public Integer getClearance() {
+        return clearance;
+    }
+
+    public String getRegion() {
+        return region;
     }
 
     public List<String> getRoles() {

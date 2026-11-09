@@ -212,9 +212,8 @@ CREATE TABLE IF NOT EXISTS test.abac_policies (
     update_time             BIGINT NOT NULL
 );
 
--- The condition_json is a structured condition tree produced by the UI,
--- e.g. {"all":[{"attribute":"subject.department","op":"eq","value":"finance"}]}.
--- Generate Rego from this validated structure; do not concatenate user text as Rego.
+-- condition_str stores the serialized conditions used to match a rule.
+-- expression stores its row-filter or column-mask expression, based on effect.
 CREATE TABLE IF NOT EXISTS test.abac_policy_rules (
   id                  BIGSERIAL PRIMARY KEY,
   policy_id           BIGINT,
@@ -223,11 +222,19 @@ CREATE TABLE IF NOT EXISTS test.abac_policy_rules (
   effect              VARCHAR(16) NOT NULL,
   priority            INTEGER NOT NULL DEFAULT 100,
   enabled             BOOLEAN NOT NULL DEFAULT TRUE,
-  condition_json      JSONB NOT NULL,
+  condition_str       TEXT NOT NULL,
+  expression         TEXT,
   description         TEXT,
   create_time         BIGINT NOT NULL,
   update_time         BIGINT NOT NULL
 );
+
+
+
+COMMENT ON COLUMN test.abac_policy_rules.condition_str IS
+  'Serialized conditions used to decide whether the rule matches.';
+COMMENT ON COLUMN test.abac_policy_rules.expression IS
+  'Row-filter or column-mask expression selected by the rule effect.';
 
 CREATE TABLE IF NOT EXISTS test.abac_policy_bindings (
     id              BIGSERIAL PRIMARY KEY,

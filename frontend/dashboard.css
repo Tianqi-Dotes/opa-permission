@@ -877,39 +877,6 @@ button {
     margin-top: 12px;
 }
 
-.policy-mask-list {
-    display: grid;
-    gap: 7px;
-    margin-top: 10px;
-}
-
-.policy-mask-row {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr) minmax(130px, .7fr);
-    align-items: center;
-    gap: 9px;
-    padding: 8px 10px;
-    border: 1px solid #edf0f5;
-    border-radius: 6px;
-    color: #52617a;
-    background: #fff;
-    font-size: 10px;
-}
-
-.policy-mask-row input {
-    accent-color: #416ee8;
-}
-
-.policy-mask-row select {
-    min-height: 32px;
-    padding: 5px 8px;
-    border: 1px solid #e4e9f1;
-    border-radius: 5px;
-    color: #52617a;
-    background: #fff;
-    font-size: 10px;
-}
-
 .policy-static-data-editor {
     display: flex;
     flex-direction: column;
@@ -1703,8 +1670,7 @@ button {
     .policy-rule-workspace,
     .policy-output-grid,
     .policy-attribute-catalogs,
-    .policy-resource-picker,
-    .policy-mask-row {
+    .policy-resource-picker {
         grid-template-columns: 1fr;
     }
 

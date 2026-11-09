@@ -862,29 +862,23 @@
                             <div class="policy-decision-settings policy-row-filter-settings"
                                  id="policy-row-filter-settings" hidden>
                                 <h4>Row filter output</h4>
-                                <p>Return a structured resource attribute condition for the data layer to enforce.</p>
-                                <div class="policy-rule-fields">
-                                    <label class="form-field">
-                                        <span>Resource attribute</span>
-                                        <select id="policy-row-filter-attribute"></select>
-                                    </label>
-                                    <label class="form-field">
-                                        <span>Operator</span>
-                                        <select id="policy-row-filter-operator"></select>
-                                    </label>
-                                    <label class="form-field">
-                                        <span>Value (JSON or text)</span>
-                                        <input id="policy-row-filter-value" type="text"
-                                               placeholder='"finance" or 10'>
-                                    </label>
-                                </div>
+                                <p>Enter the expression returned to the data layer for row filtering.</p>
+                                <label class="form-field">
+                                    <span>Expression</span>
+                                    <textarea id="policy-row-filter-expression" rows="3"
+                                              placeholder="For example: tenant_id = 10"></textarea>
+                                </label>
                             </div>
 
                             <div class="policy-decision-settings policy-column-masking-settings"
                                  id="policy-column-masking-settings" hidden>
                                 <h4>Column masking output</h4>
-                                <p>Select resource attributes to mask and choose a masking strategy.</p>
-                                <div class="policy-mask-list" id="policy-column-masking-list"></div>
+                                <p>Enter the expression returned for the masked column.</p>
+                                <label class="form-field">
+                                    <span>Expression</span>
+                                    <textarea id="policy-column-mask-expression" rows="3"
+                                              placeholder="For example: CAST('***' AS varchar(100))"></textarea>
+                                </label>
                             </div>
 
                             <div class="policy-condition-header">

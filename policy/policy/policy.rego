@@ -17,30 +17,29 @@ verified_claims := claims if {
     claims := decoded[2]
 }
 
-authenticated if {
+allow if {
     identity := input.context.identity
     verified_claims.sub == identity.user
 }
 
 allow if {
-    authenticated
-    input.action.operation == "ExecuteQuery"
-}
-
-allow if {
-    authenticated
     input.action.operation == "SetSystemSessionProperty"
     input.action.resource.systemSessionProperty.name == "query_max_run_time"
 }
 
+###### default rules
+
 allow if {
-    authenticated
-    input.action.operation == "AccessCatalog"
-    input.action.resource.catalog.name == "local_pg"
+    input.action.operation == "ExecuteQuery"
 }
 
 allow if {
-    authenticated
+    input.action.operation == "AccessCatalog"
+}
+
+
+#### customized rules
+allow if {
     input.action.operation == "SelectFromColumns"
 
     table := input.action.resource.table
@@ -53,7 +52,6 @@ allow if {
 
 
 columnMask := {"expression": "CAST(concat('**', substr(customer_name, 3)) AS varchar(100))"} if {
-    authenticated
     verified_claims.clearance == 3
 
     column := input.action.resource.column

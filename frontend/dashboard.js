@@ -235,11 +235,9 @@ const policyRuleEnabled = document.querySelector("#policy-rule-enabled");
 const policyConditionList = document.querySelector("#policy-condition-list");
 const addPolicyConditionButton = document.querySelector("#add-policy-condition");
 const policyRowFilterSettings = document.querySelector("#policy-row-filter-settings");
-const policyRowFilterAttribute = document.querySelector("#policy-row-filter-attribute");
-const policyRowFilterOperator = document.querySelector("#policy-row-filter-operator");
-const policyRowFilterValue = document.querySelector("#policy-row-filter-value");
+const policyRowFilterExpression = document.querySelector("#policy-row-filter-expression");
 const policyColumnMaskingSettings = document.querySelector("#policy-column-masking-settings");
-const policyColumnMaskingList = document.querySelector("#policy-column-masking-list");
+const policyColumnMaskExpression = document.querySelector("#policy-column-mask-expression");
 const policyEditorStatus = document.querySelector("#policy-editor-status");
 const deletePolicyRuleButton = document.querySelector("#delete-policy-rule");
 const policyStaticDataEnabled = document.querySelector("#policy-static-data-enabled");
@@ -327,7 +325,6 @@ let policyRules = [];
 let selectedPolicyRuleId = null;
 let nextPolicyRuleId = 1;
 let editingPolicyConditions = [];
-let editingPolicyMasking = [];
 let policyGenerated = false;
 let policyAttributeRequestId = 0;
 let policyResourceRequestId = 0;
@@ -1083,12 +1080,6 @@ const policyOperatorOptions = [
     ["in", "Is in list"],
     ["exists", "Exists"]
 ];
-const policyMaskStrategies = [
-    ["redact", "Redact"],
-    ["partial", "Partial mask"],
-    ["hash", "Hash"]
-];
-
 function invalidatePolicyPreview() {
     policyGenerated = false;
     policyDraftStatus.textContent = "Not generated";
@@ -1289,9 +1280,8 @@ function renderPolicyRuleEditor(rule) {
     policyRuleEffect.value = rule.effect;
     policyRuleEnabled.checked = Boolean(rule.enabled);
     editingPolicyConditions = rule.conditions.map((condition) => ({...condition}));
-    editingPolicyMasking = (rule.masking || []).map((item) => ({...item}));
     policyEditorStatus.textContent = "";
-    populatePolicyOutcomeOptions(rule);
+    populatePolicyOutcomeFields(rule);
     updatePolicyOutcomeVisibility();
     renderPolicyConditionRows();
 }
@@ -1328,8 +1318,8 @@ function addPolicyRule() {
             valueAttribute: "",
             valueText: ""
         }],
-        rowFilter: {attribute: "", operator: "eq", valueText: ""},
-        masking: []
+        rowFilterExpression: "",
+        columnMaskExpression: ""
     };
     policyRules.push(rule);
     selectedPolicyRuleId = id;
@@ -1352,12 +1342,8 @@ function applyPolicyRuleChanges() {
     rule.effect = policyRuleEffect.value;
     rule.enabled = policyRuleEnabled.checked;
     rule.conditions = editingPolicyConditions.map((condition) => ({...condition}));
-    rule.rowFilter = {
-        attribute: policyRowFilterAttribute.value,
-        operator: policyRowFilterOperator.value,
-        valueText: policyRowFilterValue.value
-    };
-    rule.masking = editingPolicyMasking.map((item) => ({...item}));
+    rule.rowFilterExpression = policyRowFilterExpression.value;
+    rule.columnMaskExpression = policyColumnMaskExpression.value;
     renderPolicyRuleList();
     policyEditorStatus.textContent = "Rule changes applied to the local draft.";
     invalidatePolicyPreview();
@@ -1372,7 +1358,6 @@ function deleteSelectedPolicyRule() {
     policyRules = policyRules.filter((candidate) => candidate.id !== rule.id);
     selectedPolicyRuleId = null;
     editingPolicyConditions = [];
-    editingPolicyMasking = [];
     renderPolicyRuleEditor(null);
     renderPolicyRuleList();
     invalidatePolicyPreview();
@@ -1448,23 +1433,12 @@ function validatePolicyConfiguration() {
             }
         });
         if (rule.effect === "row_filtering") {
-            const hasResourceAttribute = policyAttributeDefinitions.some((definition) =>
-                definition.category === "resource"
-                && `resource.${definition.name}` === rule.rowFilter.attribute);
-            if (!hasResourceAttribute) {
-                errors.push(`${rule.ruleCode}: select a resource attribute for the row filter.`);
-            }
-            try {
-                const value = parsePolicyConditionValue(rule.rowFilter);
-                if (rule.rowFilter.operator === "in" && !Array.isArray(value)) {
-                    errors.push(`${rule.ruleCode}: row filter "Is in list" requires a JSON array.`);
-                }
-            } catch (error) {
-                errors.push(`${rule.ruleCode}: ${error.message}`);
+            if (!rule.rowFilterExpression.trim()) {
+                errors.push(`${rule.ruleCode}: enter a row filter expression.`);
             }
         }
-        if (rule.effect === "column_masking" && rule.masking.length === 0) {
-            errors.push(`${rule.ruleCode}: select at least one resource attribute to mask.`);
+        if (rule.effect === "column_masking" && !rule.columnMaskExpression.trim()) {
+            errors.push(`${rule.ruleCode}: enter a column masking expression.`);
         }
     });
     if (policyStaticDataEnabled.checked) {
@@ -1576,21 +1550,14 @@ function policyDecisionPayload(rule) {
         return {
             allow: true,
             type: "row_filtering",
-            row_filter: {
-                attribute: rule.rowFilter.attribute,
-                operator: rule.rowFilter.operator,
-                value: parsePolicyConditionValue(rule.rowFilter)
-            }
+            row_filter: {expression: rule.rowFilterExpression.trim()}
         };
     }
     if (rule.effect === "column_masking") {
         return {
             allow: true,
             type: "column_masking",
-            masks: Object.fromEntries(rule.masking.map((item) => [
-                item.attribute.replace(/^resource\./, ""),
-                item.strategy
-            ]))
+            column_mask: {expression: rule.columnMaskExpression.trim()}
         };
     }
     return {allow: true, type: "allow"};
@@ -1796,68 +1763,9 @@ function renderPolicyAttributeCatalogs() {
     );
 }
 
-function renderPolicyMaskingRows() {
-    policyColumnMaskingList.replaceChildren();
-    const resourceDefinitions = policyAttributeDefinitions.filter(
-        (definition) => definition.category === "resource");
-    if (resourceDefinitions.length === 0) {
-        const empty = document.createElement("p");
-        empty.className = "policy-catalog-empty";
-        empty.textContent = "Resource attributes are required before column masking can be configured.";
-        policyColumnMaskingList.append(empty);
-        return;
-    }
-    resourceDefinitions.forEach((definition) => {
-        const attribute = `resource.${definition.name}`;
-        const existing = editingPolicyMasking.find((item) => item.attribute === attribute);
-        const row = document.createElement("label");
-        row.className = "policy-mask-row";
-        const checkbox = document.createElement("input");
-        checkbox.type = "checkbox";
-        checkbox.checked = Boolean(existing);
-        const name = document.createElement("span");
-        name.textContent = `${definition.name} (${definition.dataType})`;
-        const strategy = document.createElement("select");
-        policyMaskStrategies.forEach(([value, label]) => strategy.append(new Option(label, value)));
-        strategy.value = existing ? existing.strategy : "redact";
-        strategy.disabled = !existing;
-        checkbox.addEventListener("change", () => {
-            const mask = editingPolicyMasking.find((item) => item.attribute === attribute);
-            if (checkbox.checked && !mask) {
-                editingPolicyMasking.push({attribute, strategy: strategy.value});
-            } else if (!checkbox.checked && mask) {
-                editingPolicyMasking = editingPolicyMasking.filter((item) => item.attribute !== attribute);
-            }
-            strategy.disabled = !checkbox.checked;
-            invalidatePolicyPreview();
-        });
-        strategy.addEventListener("change", () => {
-            const mask = editingPolicyMasking.find((item) => item.attribute === attribute);
-            if (mask) {
-                mask.strategy = strategy.value;
-                invalidatePolicyPreview();
-            }
-        });
-        row.append(checkbox, name, strategy);
-        policyColumnMaskingList.append(row);
-    });
-}
-
-function populatePolicyOutcomeOptions(rule) {
-    policyRowFilterAttribute.replaceChildren(new Option("Select a resource attribute", ""));
-    policyAttributeDefinitions
-        .filter((definition) => definition.category === "resource")
-        .forEach((definition) => policyRowFilterAttribute.append(new Option(
-            `${definition.name} (${definition.dataType})`,
-            `resource.${definition.name}`
-        )));
-    policyRowFilterAttribute.value = rule && rule.rowFilter ? rule.rowFilter.attribute : "";
-    policyRowFilterOperator.replaceChildren();
-    policyOperatorOptions.forEach(([value, label]) =>
-        policyRowFilterOperator.append(new Option(label, value)));
-    policyRowFilterOperator.value = rule && rule.rowFilter ? rule.rowFilter.operator : "eq";
-    policyRowFilterValue.value = rule && rule.rowFilter ? rule.rowFilter.valueText : "";
-    renderPolicyMaskingRows();
+function populatePolicyOutcomeFields(rule) {
+    policyRowFilterExpression.value = rule ? rule.rowFilterExpression || "" : "";
+    policyColumnMaskExpression.value = rule ? rule.columnMaskExpression || "" : "";
 }
 
 function updatePolicyOutcomeVisibility() {
@@ -1865,14 +1773,10 @@ function updatePolicyOutcomeVisibility() {
     const columnMasking = policyRuleEffect.value === "column_masking";
     policyRowFilterSettings.hidden = !rowFilter;
     policyColumnMaskingSettings.hidden = !columnMasking;
-    [policyRowFilterAttribute, policyRowFilterOperator].forEach((control) => {
-        control.disabled = !rowFilter;
-        control.required = rowFilter;
-    });
-    const rowFilterValueRequired = rowFilter && policyRowFilterOperator.value !== "exists";
-    policyRowFilterValue.disabled = !rowFilter;
-    policyRowFilterValue.required = rowFilterValueRequired;
-    policyRowFilterValue.closest("label").hidden = rowFilter && !rowFilterValueRequired;
+    policyRowFilterExpression.disabled = !rowFilter;
+    policyRowFilterExpression.required = rowFilter;
+    policyColumnMaskExpression.disabled = !columnMasking;
+    policyColumnMaskExpression.required = columnMasking;
 }
 
 function populateSubjectAttributeSelects() {
@@ -3111,15 +3015,6 @@ policyRuleForm.addEventListener("input", invalidatePolicyPreview);
 policyRuleEffect.addEventListener("change", () => {
     updatePolicyOutcomeVisibility();
     invalidatePolicyPreview();
-});
-policyRowFilterOperator.addEventListener("change", updatePolicyOutcomeVisibility);
-[
-    policyRowFilterAttribute,
-    policyRowFilterOperator,
-    policyRowFilterValue
-].forEach((control) => {
-    control.addEventListener("input", invalidatePolicyPreview);
-    control.addEventListener("change", invalidatePolicyPreview);
 });
 addPolicyConditionButton.addEventListener("click", () => {
     if (!selectedPolicyRule()) {

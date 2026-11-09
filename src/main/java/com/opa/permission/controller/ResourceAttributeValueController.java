@@ -21,9 +21,12 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Instant;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
+import java.util.Locale;
+import java.util.Objects;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/abac/resource-attributes")
@@ -56,23 +59,30 @@ public class ResourceAttributeValueController {
         }
         query.orderByAsc("resource_id", "attribute_id", "id");
         List<ResourceAttributeValue> values = resourceAttributeValueService.list(query);
-        List<Long> resourceIds = values.stream()
+        if (values.isEmpty()) {
+            return ResponseEntity.ok(List.of());
+        }
+
+        Set<Long> resourceIds = new HashSet<>();
+        values.stream()
                 .map(ResourceAttributeValue::getResourceId)
-                .filter(id -> id != null)
-                .distinct()
-                .toList();
+                .filter(Objects::nonNull)
+                .forEach(resourceIds::add);
         Map<Long, String> resourceCodes = new HashMap<>();
         if (!resourceIds.isEmpty()) {
-            for (AbacResource resource : abacResourceService.listByIds(resourceIds)) {
+            List<AbacResource> resources = abacResourceService.list(
+                    new QueryWrapper<AbacResource>().in("id", resourceIds));
+            for (AbacResource resource : resources) {
                 resourceCodes.put(resource.getId(), resource.getResourceCode());
             }
         }
+
         return ResponseEntity.ok(values.stream()
                 .map(value -> new ResourceAttributeValueResponse(
                         value.getId(),
                         value.getResourceId(),
-                        resourceCodes.get(value.getResourceId()),
                         value.getAttributeId(),
+                        resourceCodes.get(value.getResourceId()),
                         value.getValueText(),
                         value.getValueJson(),
                         value.getCreateTime(),
@@ -241,9 +251,14 @@ public class ResourceAttributeValueController {
     public record ResourceAttributeValueRequest(Long resourceId, Long attributeId, String valueText) {
     }
 
-    public record ResourceAttributeValueResponse(Long id, Long resourceId, String resourceCode,
-                                                 Long attributeId, String valueText, Object valueJson,
-                                                 Long createTime, Long updateTime) {
+    public record ResourceAttributeValueResponse(Long id,
+                                                 Long resourceId,
+                                                 Long attributeId,
+                                                 String resourceCode,
+                                                 String valueText,
+                                                 Object valueJson,
+                                                 Long createTime,
+                                                 Long updateTime) {
     }
 
     public record ApiError(String message) {

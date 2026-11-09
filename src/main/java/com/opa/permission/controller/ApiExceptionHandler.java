@@ -3,6 +3,9 @@ package com.opa.permission.controller;
 import com.opa.permission.service.TrinoQueryException;
 import com.opa.permission.service.TrinoQueryValidationException;
 import com.opa.permission.service.DefaultAttributeInjectionException;
+import com.opa.permission.service.TrinoMetadataException;
+import com.opa.permission.service.TrinoMetadataNotFoundException;
+import com.opa.permission.service.ResourceAttributeValueConflictException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -19,6 +22,25 @@ public class ApiExceptionHandler {
     public ResponseEntity<ApiError> handleTrinoQueryFailure() {
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
                 .body(new ApiError("Trino query execution failed"));
+    }
+
+    @ExceptionHandler(TrinoMetadataNotFoundException.class)
+    public ResponseEntity<ApiError> handleTrinoMetadataNotFound(TrinoMetadataNotFoundException exception) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ApiError(exception.getMessage()));
+    }
+
+    @ExceptionHandler(TrinoMetadataException.class)
+    public ResponseEntity<ApiError> handleTrinoMetadataFailure() {
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                .body(new ApiError("Trino metadata request failed"));
+    }
+
+    @ExceptionHandler(ResourceAttributeValueConflictException.class)
+    public ResponseEntity<ApiError> handleResourceAttributeConflict(
+            ResourceAttributeValueConflictException exception) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ApiError(exception.getMessage()));
     }
 
     @ExceptionHandler(DefaultAttributeInjectionException.class)

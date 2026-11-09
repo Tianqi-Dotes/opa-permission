@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS test.resources (
                                          id                  BIGSERIAL PRIMARY KEY,
                                          parent_resource_id BIGINT,
                                          external            BOOLEAN NOT NULL DEFAULT FALSE,
-                                         resource_code       VARCHAR(256) NOT NULL UNIQUE,
+                                         resource_code       VARCHAR(256) NOT NULL,
                                          resource_type       VARCHAR(64) NOT NULL,
                                          resource_name       VARCHAR(256),
                                          owner               VARCHAR(128),
@@ -16,6 +16,17 @@ CREATE TABLE IF NOT EXISTS test.resources (
                                          create_time         BIGINT NOT NULL,
                                          update_time         BIGINT NOT NULL
 );
+
+ALTER TABLE test.resources
+    DROP CONSTRAINT IF EXISTS resources_resource_code_key;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_resources_root_resource_code
+    ON test.resources (resource_code)
+    WHERE parent_resource_id IS NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_resources_child_resource_code
+    ON test.resources (parent_resource_id, resource_code)
+    WHERE parent_resource_id IS NOT NULL;
 
 CREATE INDEX IF NOT EXISTS idx_resources_parent_resource_id
     ON test.resources (parent_resource_id);

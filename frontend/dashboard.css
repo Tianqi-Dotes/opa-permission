@@ -424,6 +424,8 @@ button {
 .create-datasource-panel[hidden],
 .attribute-dictionary-panel[hidden],
 .resource-scope-panel[hidden],
+#resource-attribute-resource-id-field[hidden],
+.trino-resource-picker[hidden],
 .policy-config-panel[hidden],
 .policy-rule-form[hidden],
 .policy-empty-editor[hidden],
@@ -1454,6 +1456,75 @@ button {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 14px;
     margin-top: 15px;
+}
+
+.trino-resource-picker {
+    margin-top: 14px;
+    padding: 14px;
+    border: 1px solid #e1e8f4;
+    border-radius: 8px;
+    background: #fff;
+}
+
+.trino-resource-picker-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.trino-resource-picker-header p {
+    margin: 0;
+    color: #64728a;
+    font-size: 11px;
+}
+
+.trino-resource-tree {
+    max-height: 430px;
+    margin-top: 12px;
+    padding: 10px;
+    overflow: auto;
+    border: 1px solid #edf0f5;
+    border-radius: 6px;
+    color: #40506a;
+    font-size: 11px;
+}
+
+.trino-resource-tree-list {
+    display: grid;
+    gap: 5px;
+    margin: 0;
+    padding-left: 18px;
+    list-style: none;
+}
+
+.trino-resource-tree-node {
+    min-width: 0;
+}
+
+.trino-resource-tree-choice {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 26px;
+    overflow-wrap: anywhere;
+    cursor: pointer;
+}
+
+.trino-resource-tree-choice input {
+    flex: 0 0 auto;
+    accent-color: #416ee8;
+}
+
+.trino-resource-tree-children {
+    margin-left: 12px;
+}
+
+.trino-resource-tree-children summary {
+    width: fit-content;
+    color: #8995a7;
+    cursor: pointer;
+    font-size: 9px;
 }
 
 .attribute-checkbox-field {

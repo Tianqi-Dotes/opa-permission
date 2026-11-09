@@ -646,8 +646,22 @@
 
                 <form class="attribute-form" id="resource-attribute-form" hidden>
                     <h3 id="resource-attribute-form-title">Add resource attribute value</h3>
+                    <div class="trino-resource-picker" id="resource-attribute-trino-picker" hidden>
+                        <div class="trino-resource-picker-header">
+                            <p>Select one or more Trino resources. Saving replaces all resources under this datasource.</p>
+                            <button class="secondary-button" id="refresh-resource-trino-tree" type="button">
+                                Reload tree
+                            </button>
+                        </div>
+                        <div class="trino-resource-tree" id="resource-attribute-trino-tree"
+                             aria-label="Trino resource tree"></div>
+                        <p class="attribute-status" id="resource-attribute-trino-tree-status"
+                           role="status" aria-live="polite">
+                            Select an external Trino datasource to load its tree.
+                        </p>
+                    </div>
                     <div class="attribute-form-grid">
-                        <label class="form-field">
+                        <label class="form-field" id="resource-attribute-resource-id-field">
                             <span>Resource ID</span>
                             <input id="resource-attribute-resource-id" name="resourceId"
                                    type="number" min="1" step="1" required>

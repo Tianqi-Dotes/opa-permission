@@ -15,7 +15,7 @@ public class AbacResource {
     //internal no tree structure, external with dynamic
     private Long parentResourceId;
     private Boolean external;
-    private String resourceCode;//trino:prod.sales.orders
+    private String resourceCode;
     private String resourceType;
     private String resourceName;
     private String owner;//tenant

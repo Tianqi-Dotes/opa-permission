@@ -279,9 +279,14 @@ const filterResourceAttributesButton = document.querySelector("#filter-resource-
 const newResourceAttributeButton = document.querySelector("#new-resource-attribute");
 const resourceAttributeForm = document.querySelector("#resource-attribute-form");
 const resourceAttributeFormTitle = document.querySelector("#resource-attribute-form-title");
+const resourceAttributeResourceIdField = document.querySelector("#resource-attribute-resource-id-field");
 const resourceAttributeResourceId = document.querySelector("#resource-attribute-resource-id");
 const resourceAttributeAttributeId = document.querySelector("#resource-attribute-attribute-id");
 const resourceAttributeValueText = document.querySelector("#resource-attribute-value-text");
+const resourceAttributeTrinoPicker = document.querySelector("#resource-attribute-trino-picker");
+const refreshResourceTrinoTreeButton = document.querySelector("#refresh-resource-trino-tree");
+const resourceAttributeTrinoTree = document.querySelector("#resource-attribute-trino-tree");
+const resourceAttributeTrinoTreeStatus = document.querySelector("#resource-attribute-trino-tree-status");
 const saveResourceAttributeButton = document.querySelector("#save-resource-attribute");
 const cancelResourceAttributeButton = document.querySelector("#cancel-resource-attribute");
 const resourceAttributeRows = document.querySelector("#resource-attribute-rows");
@@ -345,6 +350,10 @@ let resourceAttributeMutationInProgress = false;
 let editingResourceAttributeId = null;
 let activeResourceScope = "internal";
 let selectedResource = null;
+let selectedExternalDatasource = null;
+let selectedExternalTreeNodes = new Map();
+let resourceAttributeUsesExternalTree = false;
+let externalTreeRequestId = 0;
 const resourceListRequestIds = {internal: 0, external: 0};
 
 function getTokenSubject(encodedToken) {
@@ -2435,6 +2444,11 @@ function renderResourceList(scope, resources) {
         selectButton.setAttribute("aria-label", `Select resource ${resource.resourceName || resource.id}`);
         selectButton.addEventListener("click", () => {
             selectedResource = resource;
+            selectedExternalDatasource = scope === "external"
+                    && resource.external
+                    && String(resource.resourceType).toLowerCase() === "trino_connection"
+                ? resource
+                : null;
             resourceAttributeFilterResourceId.value = String(resource.id);
             selectedResourceLabel.textContent =
                 `Selected ${resource.resourceName || resource.resourceCode} (ID ${resource.id}).`;
@@ -2471,9 +2485,13 @@ async function loadResourceList(scope) {
         if (requestId !== resourceListRequestIds[scope]) {
             return;
         }
-        renderResourceList(scope, resources);
+        const visibleResources = isExternal
+            ? resources.filter((resource) =>
+                String(resource.resourceType).toLowerCase() === "trino_connection")
+            : resources;
+        renderResourceList(scope, visibleResources);
         status.textContent =
-            `Loaded ${resources.length} ${scope} resource${resources.length === 1 ? "" : "s"}.`;
+            `Loaded ${visibleResources.length} ${scope} resource${visibleResources.length === 1 ? "" : "s"}.`;
     } catch (error) {
         if (requestId === resourceListRequestIds[scope]) {
             rows.replaceChildren();
@@ -2627,15 +2645,192 @@ async function loadResourceAttributes() {
     await loadResourceList(activeResourceScope);
 }
 
-function openResourceAttributeForm(value = null) {
+function appendTrinoResourceTreeNode(list, nodeType, node, path, datasourceResourceId) {
+    const item = document.createElement("li");
+    item.className = "trino-resource-tree-node";
+
+    const choice = document.createElement("label");
+    choice.className = "trino-resource-tree-choice";
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    const selection = {nodeType, ...path};
+    const selectionKey = JSON.stringify(selection);
+    checkbox.checked = selectedExternalTreeNodes.has(selectionKey);
+    checkbox.addEventListener("change", () => {
+        if (checkbox.checked) {
+            selectedExternalTreeNodes.set(selectionKey, selection);
+        } else {
+            selectedExternalTreeNodes.delete(selectionKey);
+        }
+        const selectedCount = selectedExternalTreeNodes.size;
+        resourceAttributeTrinoTreeStatus.textContent = selectedCount === 0
+            ? "Select one or more Trino resources."
+            : `${selectedCount} Trino resource${selectedCount === 1 ? "" : "s"} selected.`;
+    });
+    const nameElement = document.createElement("span");
+    nameElement.textContent = node.type ? `${node.name} (${node.type})` : node.name;
+    choice.append(checkbox, nameElement);
+    item.append(choice);
+
+    const childLevel = {catalog: "schemas", schema: "tables", table: "fields"}[nodeType];
+    if (childLevel) {
+        const details = document.createElement("details");
+        details.className = "trino-resource-tree-children";
+        const summary = document.createElement("summary");
+        summary.textContent = `Load ${childLevel}`;
+        const childList = document.createElement("ul");
+        childList.className = "trino-resource-tree-list";
+        details.append(summary, childList);
+        details.addEventListener("toggle", () => {
+            if (details.open && details.dataset.loaded !== "true") {
+                loadTrinoResourceChildren(details, nodeType, path, datasourceResourceId, childList);
+            }
+        });
+        item.append(details);
+    }
+
+    list.append(item);
+    return item;
+}
+
+function pathLabel(path) {
+    return [path.catalog, path.schema, path.table, path.field].filter(Boolean).join(".");
+}
+
+function renderTrinoResourceTree(catalogs, datasourceResourceId) {
+    if (!Array.isArray(catalogs)) {
+        throw new Error("The Trino metadata response was not a list of catalogs.");
+    }
+    if (catalogs.length === 0) {
+        resourceAttributeTrinoTree.replaceChildren();
+        resourceAttributeTrinoTreeStatus.textContent = "No catalogs are available for this datasource.";
+        return;
+    }
+
+    const list = document.createElement("ul");
+    list.className = "trino-resource-tree-list";
+    catalogs.forEach((catalog) => {
+        appendTrinoResourceTreeNode(
+            list, "catalog", catalog, {catalog: catalog.name}, datasourceResourceId);
+    });
+    resourceAttributeTrinoTree.replaceChildren(list);
+    resourceAttributeTrinoTreeStatus.textContent =
+        "Expand a catalog, schema, or table to load children; select one or more resources.";
+}
+
+async function loadTrinoResourceChildren(details, parentType, path, datasourceResourceId, childList) {
+    if (details.dataset.loading === "true" || details.dataset.loaded === "true") {
+        return;
+    }
+    const childLevel = {catalog: "schemas", schema: "tables", table: "fields"}[parentType];
+    const childType = {catalog: "schema", schema: "table", table: "field"}[parentType];
+    const query = new URLSearchParams();
+    ["catalog", "schema", "table"].forEach((key) => {
+        if (path[key]) {
+            query.set(key, path[key]);
+        }
+    });
+    const summary = details.querySelector("summary");
+    details.dataset.loading = "true";
+    summary.textContent = `Loading ${childLevel}...`;
+    try {
+        const response = await fetch(
+            `${apiBaseUrl}/api/trino/connections/${encodeURIComponent(String(datasourceResourceId))}/tree?${query}`,
+            {headers: {Authorization: `Bearer ${token}`}}
+        );
+        if (!response.ok) {
+            throw new Error(await getApiError(response));
+        }
+        const children = await response.json();
+        if (!Array.isArray(children)) {
+            throw new Error(`The Trino ${childLevel} response was not a list.`);
+        }
+        if (!details.isConnected) {
+            return;
+        }
+        childList.replaceChildren();
+        children.forEach((child) => {
+            const childPath = {...path};
+            childPath[childType] = child.name;
+            appendTrinoResourceTreeNode(
+                childList, childType, child, childPath, datasourceResourceId);
+        });
+        details.dataset.loaded = "true";
+        summary.textContent = children.length === 0
+            ? `No ${childLevel} found`
+            : `${children.length} ${childLevel}`;
+        resourceAttributeTrinoTreeStatus.textContent =
+            children.length === 0 ? `No ${childLevel} found under ${pathLabel(path)}.`
+                : `Loaded ${children.length} ${childLevel} under ${pathLabel(path)}.`;
+    } catch (error) {
+        if (details.isConnected) {
+            summary.textContent = `Unable to load ${childLevel}; close and reopen to retry`;
+            resourceAttributeTrinoTreeStatus.textContent =
+                error.message || `Unable to load Trino ${childLevel}.`;
+        }
+    } finally {
+        delete details.dataset.loading;
+    }
+}
+
+async function loadTrinoResourceTree() {
+    const requestId = ++externalTreeRequestId;
+    if (!selectedExternalDatasource) {
+        refreshResourceTrinoTreeButton.disabled = false;
+        resourceAttributeTrinoTreeStatus.textContent = "Select an external Trino datasource first.";
+        return;
+    }
+    const datasourceResourceId = selectedExternalDatasource.id;
+    selectedExternalTreeNodes = new Map();
+    resourceAttributeTrinoTree.replaceChildren();
+    resourceAttributeTrinoTreeStatus.textContent = "Loading Trino metadata...";
+    refreshResourceTrinoTreeButton.disabled = true;
+    try {
+        const response = await fetch(
+            `${apiBaseUrl}/api/trino/connections/${encodeURIComponent(String(datasourceResourceId))}/tree`,
+            {headers: {Authorization: `Bearer ${token}`}}
+        );
+        if (!response.ok) {
+            throw new Error(await getApiError(response));
+        }
+        const catalogs = await response.json();
+        if (requestId !== externalTreeRequestId
+                || !selectedExternalDatasource
+                || selectedExternalDatasource.id !== datasourceResourceId) {
+            return;
+        }
+        renderTrinoResourceTree(catalogs, datasourceResourceId);
+    } catch (error) {
+        if (requestId === externalTreeRequestId) {
+            resourceAttributeTrinoTree.replaceChildren();
+            resourceAttributeTrinoTreeStatus.textContent =
+                error.message || "Unable to load the Trino resource tree.";
+        }
+    } finally {
+        if (requestId === externalTreeRequestId) {
+            refreshResourceTrinoTreeButton.disabled = false;
+        }
+    }
+}
+
+async function openResourceAttributeForm(value = null) {
     if (resourceAttributeMutationInProgress || resourceAttributeDefinitions.length === 0) {
         return;
     }
+    if (!value && activeResourceScope === "external" && !selectedExternalDatasource) {
+        resourceAttributeStatus.textContent = "Select an external Trino datasource before adding a value.";
+        return;
+    }
     editingResourceAttributeId = value ? value.id : null;
+    resourceAttributeUsesExternalTree = !value && activeResourceScope === "external";
+    selectedExternalTreeNodes = new Map();
     resourceAttributeFormTitle.textContent = value
         ? "Edit resource attribute value"
         : "Add resource attribute value";
     saveResourceAttributeButton.textContent = value ? "Save changes" : "Save value";
+    resourceAttributeResourceIdField.hidden = resourceAttributeUsesExternalTree;
+    resourceAttributeResourceId.required = !resourceAttributeUsesExternalTree;
+    resourceAttributeTrinoPicker.hidden = !resourceAttributeUsesExternalTree;
     resourceAttributeResourceId.value = value
         ? String(value.resourceId)
         : resourceAttributeFilterResourceId.value;
@@ -2644,13 +2839,26 @@ function openResourceAttributeForm(value = null) {
         : resourceAttributeFilterAttributeId.value;
     resourceAttributeValueText.value = value && value.valueText != null ? value.valueText : "";
     resourceAttributeForm.hidden = false;
-    resourceAttributeResourceId.focus();
+    if (resourceAttributeUsesExternalTree) {
+        await loadTrinoResourceTree();
+    } else {
+        resourceAttributeResourceId.focus();
+    }
 }
 
 function resetResourceAttributeForm() {
     editingResourceAttributeId = null;
+    resourceAttributeUsesExternalTree = false;
+    selectedExternalTreeNodes = new Map();
+    externalTreeRequestId++;
     resourceAttributeForm.reset();
     resourceAttributeForm.hidden = true;
+    resourceAttributeResourceIdField.hidden = false;
+    resourceAttributeResourceId.required = true;
+    resourceAttributeTrinoPicker.hidden = true;
+    refreshResourceTrinoTreeButton.disabled = false;
+    resourceAttributeTrinoTree.replaceChildren();
+    resourceAttributeTrinoTreeStatus.textContent = "Select an external Trino datasource to load its tree.";
     resourceAttributeFormTitle.textContent = "Add resource attribute value";
     saveResourceAttributeButton.textContent = "Save value";
 }
@@ -2663,9 +2871,20 @@ async function saveResourceAttribute(event) {
 
     const resourceId = Number(resourceAttributeResourceId.value);
     const attributeId = Number(resourceAttributeAttributeId.value);
-    if (!Number.isSafeInteger(resourceId) || resourceId <= 0
+    if ((!resourceAttributeUsesExternalTree
+            && (!Number.isSafeInteger(resourceId) || resourceId <= 0))
             || !Number.isSafeInteger(attributeId) || attributeId <= 0) {
         resourceAttributeStatus.textContent = "Select a valid resource and attribute.";
+        return;
+    }
+    if (resourceAttributeUsesExternalTree
+            && (!selectedExternalDatasource || selectedExternalTreeNodes.size === 0)) {
+        resourceAttributeTrinoTreeStatus.textContent = "Select at least one Trino resource before saving.";
+        return;
+    }
+    if (resourceAttributeUsesExternalTree
+            && !window.confirm(
+                `Replace all resources under this Trino datasource with the ${selectedExternalTreeNodes.size} selected resource(s)? Existing resource attribute values under those resources will be removed.`)) {
         return;
     }
 
@@ -2673,17 +2892,26 @@ async function saveResourceAttribute(event) {
     saveResourceAttributeButton.disabled = true;
     cancelResourceAttributeButton.disabled = true;
     const isEditing = editingResourceAttributeId !== null;
-    const value = {
-        resourceId,
-        attributeId,
-        valueText: resourceAttributeValueText.value
-    };
+    const usesExternalTree = resourceAttributeUsesExternalTree;
+    const value = usesExternalTree
+        ? {
+            attributeId,
+            valueText: resourceAttributeValueText.value,
+            selections: Array.from(selectedExternalTreeNodes.values())
+        }
+        : {
+            resourceId,
+            attributeId,
+            valueText: resourceAttributeValueText.value
+        };
     try {
-        const path = isEditing
-            ? `/api/abac/resource-attributes/${encodeURIComponent(String(editingResourceAttributeId))}`
-            : "/api/abac/resource-attributes";
+        const path = usesExternalTree
+            ? `/api/trino/connections/${encodeURIComponent(String(selectedExternalDatasource.id))}/resource-attributes`
+            : isEditing
+                ? `/api/abac/resource-attributes/${encodeURIComponent(String(editingResourceAttributeId))}`
+                : "/api/abac/resource-attributes";
         const response = await fetch(`${apiBaseUrl}${path}`, {
-            method: isEditing ? "PUT" : "POST",
+            method: usesExternalTree || isEditing ? "PUT" : "POST",
             headers: {
                 Authorization: `Bearer ${token}`,
                 "Content-Type": "application/json"
@@ -2693,10 +2921,16 @@ async function saveResourceAttribute(event) {
         if (!response.ok) {
             throw new Error(await getApiError(response));
         }
-        resourceAttributeStatus.textContent = isEditing
-            ? "Resource attribute value updated."
-            : "Resource attribute value created.";
+        const savedResult = usesExternalTree ? await response.json() : null;
+        resourceAttributeStatus.textContent = usesExternalTree
+            ? `Recreated hierarchy for ${savedResult.resourceCount} selected Trino resource${savedResult.resourceCount === 1 ? "" : "s"}.`
+            : isEditing
+                ? "Resource attribute value updated."
+                : "Resource attribute value created.";
         resetResourceAttributeForm();
+        if (usesExternalTree) {
+            resourceAttributeFilterResourceId.value = "";
+        }
         await loadResourceAttributeValues();
     } catch (error) {
         resourceAttributeStatus.textContent =
@@ -3066,6 +3300,7 @@ createDatasourceForm.addEventListener("submit", createDatasource);
 filterResourceAttributesButton.addEventListener("click", loadResourceAttributeValues);
 refreshInternalResourcesButton.addEventListener("click", () => loadResourceList("internal"));
 refreshExternalResourcesButton.addEventListener("click", () => loadResourceList("external"));
+refreshResourceTrinoTreeButton.addEventListener("click", loadTrinoResourceTree);
 newResourceAttributeButton.addEventListener("click", () => openResourceAttributeForm());
 resourceAttributeForm.addEventListener("submit", saveResourceAttribute);
 cancelResourceAttributeButton.addEventListener("click", resetResourceAttributeForm);

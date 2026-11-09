@@ -17,9 +17,48 @@ verified_claims := claims if {
     claims := decoded[2]
 }
 
-allow if {
+authenticated if {
     identity := input.context.identity
-    identity.user == "admin"
     verified_claims.sub == identity.user
-    verified_claims.tenant_id == 1
+}
+
+allow if {
+    authenticated
+    input.action.operation == "ExecuteQuery"
+}
+
+allow if {
+    authenticated
+    input.action.operation == "SetSystemSessionProperty"
+    input.action.resource.systemSessionProperty.name == "query_max_run_time"
+}
+
+allow if {
+    authenticated
+    input.action.operation == "AccessCatalog"
+    input.action.resource.catalog.name == "local_pg"
+}
+
+allow if {
+    authenticated
+    input.action.operation == "SelectFromColumns"
+
+    table := input.action.resource.table
+    table.catalogName == "local_pg"
+    table.schemaName == "public"
+    table.tableName == "customers"
+    table.columns == ["customer_name"]
+}
+
+
+
+columnMask := {"expression": "CAST(concat('**', substr(customer_name, 3)) AS varchar(100))"} if {
+    authenticated
+    verified_claims.clearance == 3
+
+    column := input.action.resource.column
+    column.catalogName == "local_pg"
+    column.schemaName == "public"
+    column.tableName == "customers"
+    column.columnName == "customer_name"
 }

@@ -2,6 +2,7 @@ package com.opa.permission.service.impl;
 
 import com.opa.permission.service.OpaDecisionException;
 import com.opa.permission.service.OpaDecisionService;
+import com.opa.permission.service.OpaRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
@@ -10,7 +11,6 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
-import java.util.LinkedHashMap;
 import java.util.Map;
 
 @Service
@@ -38,13 +38,11 @@ public class OpaDecisionServiceImpl implements OpaDecisionService {
             throw new IllegalArgumentException("jwt is required");
         }
 
-        Map<String, Object> resource = Map.of("tenant_id", resourceTenantId);
-        Map<String, Object> input = new LinkedHashMap<>();
-        input.put("action", action.trim());
-        input.put("resource_type", RESOURCE_TYPE_BUCKET);
-        input.put("resource", resource);
-        input.put("jwt", jwt);
-        Map<String, Object> request = Map.of("input", input);
+        OpaRequest request = new OpaRequest(new OpaRequest.Input(
+                action.trim(),
+                RESOURCE_TYPE_BUCKET,
+                new OpaRequest.Resource(resourceTenantId),
+                jwt));
 
         Map<String, Object> response;
         try {

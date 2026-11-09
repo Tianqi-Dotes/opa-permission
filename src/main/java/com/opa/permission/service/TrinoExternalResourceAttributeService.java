@@ -141,7 +141,8 @@ public class TrinoExternalResourceAttributeService {
         long now = Instant.now().toEpochMilli();
 
         for (ResourcePathNode pathNode : path) {
-            String resourceCode = pathNode.name();
+            String resourceCode = TrinoResourceCode.generate(
+                    tenantId, pathNode.type(), pathNode.name());
             AbacResource resource = abacResourceService.getOne(
                     new QueryWrapper<AbacResource>()
                             .eq("parent_resource_id", parent.getId())

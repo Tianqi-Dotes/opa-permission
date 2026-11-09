@@ -38,12 +38,12 @@ allow if {
 }
 
 
-#### customized rules
+
 allow if {
     input.action.operation == "SelectFromColumns"
 }
 
-
+#### customized rules
 
 columnMask := {"expression": "CAST(concat('**', substr(customer_name, 3)) AS varchar(100))"} if {
     verified_claims.clearance == 3

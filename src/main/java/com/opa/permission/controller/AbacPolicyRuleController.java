@@ -7,7 +7,10 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -44,14 +47,8 @@ public class AbacPolicyRuleController {
 
         long now = Instant.now().toEpochMilli();
         AbacPolicyRule rule = new AbacPolicyRule();
-        rule.setPolicyId(request.policyId());
         rule.setRuleCode("rule_" + UUID.randomUUID().toString().replace("-", ""));
-        rule.setRuleName(request.ruleName().trim());
-        rule.setEffect(normalize(request.effect()));
-        rule.setEnabled(request.enabled() == null || request.enabled());
-        rule.setConditionStr(compileConditions(request.conditions()));
-        rule.setExpression(StringUtils.hasText(request.expression()) ? request.expression().trim() : null);
-        rule.setDescription(request.description());
+        updateRuleFields(rule, request);
         rule.setCreateTime(now);
         rule.setUpdateTime(now);
 
@@ -66,6 +63,52 @@ public class AbacPolicyRuleController {
         }
 
         return ResponseEntity.status(HttpStatus.CREATED).body(rule);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<?> update(@PathVariable("id") Long id,
+                                    @RequestBody(required = false) CreatePolicyRuleRequest request) {
+        String validationError = validate(request);
+        if (validationError != null) {
+            return ResponseEntity.badRequest().body(new ApiError(validationError));
+        }
+
+        AbacPolicyRule rule = abacPolicyRuleService.getById(id);
+        if (rule == null) {
+            return notFound();
+        }
+
+        updateRuleFields(rule, request);
+        rule.setUpdateTime(Instant.now().toEpochMilli());
+        if (!abacPolicyRuleService.updateById(rule)) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiError("Policy rule was not updated"));
+        }
+        return ResponseEntity.ok(rule);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> delete(@PathVariable("id") Long id) {
+        if (abacPolicyRuleService.getById(id) == null) {
+            return notFound();
+        }
+        if (!abacPolicyRuleService.removeById(id)) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiError("Policy rule was not deleted"));
+        }
+        return ResponseEntity.noContent().build();
+    }
+
+    private static void updateRuleFields(AbacPolicyRule rule, CreatePolicyRuleRequest request) {
+        if (request.policyId() != null) {
+            rule.setPolicyId(request.policyId());
+        }
+        rule.setRuleName(request.ruleName().trim());
+        rule.setEffect(normalize(request.effect()));
+        rule.setEnabled(request.enabled() == null || request.enabled());
+        rule.setConditionStr(compileConditions(request.conditions()));
+        rule.setExpression(StringUtils.hasText(request.expression()) ? request.expression().trim() : null);
+        rule.setDescription(request.description());
     }
 
     private static String validate(CreatePolicyRuleRequest request) {
@@ -112,34 +155,84 @@ public class AbacPolicyRuleController {
         }
         String operator = regoOperator(condition.operator());
         if (operator == null) {
-            return prefix + ".operator must be equals, less_than, or greater_than";
+            return prefix + ".operator must be eq, neq, gt, gte, lt, lte, in, or exists";
         }
         JsonNode value = condition.value();
-        if (value == null || value.isContainerNode()) {
+        String valueAttribute = condition.valueAttribute() == null ? "" : condition.valueAttribute().trim();
+        if (operator.equals("exists")) {
+            return value == null && valueAttribute.isEmpty()
+                    ? null
+                    : prefix + " with exists must not include a value";
+        }
+        if (!valueAttribute.isEmpty() && !REGO_REFERENCE.matcher(valueAttribute).matches()) {
+            return prefix + ".valueAttribute must be a dotted Rego reference";
+        }
+        if ((value == null) == valueAttribute.isEmpty()) {
+            return prefix + " must include exactly one of value or valueAttribute";
+        }
+        if (value != null && operator.equals("in") && !value.isArray()) {
+            return prefix + ".value must be a JSON array for the in operator";
+        }
+        if (value != null && !operator.equals("in") && value.isContainerNode()) {
             return prefix + ".value must be a JSON scalar";
         }
-        if (!operator.equals("==") && !value.isNumber() && !value.isTextual()) {
-            return prefix + ".value must be a number or string for less_than and greater_than";
+        if (value != null && isComparisonOperator(operator)
+                && !value.isNumber() && !value.isTextual()) {
+            return prefix + ".value must be a number or string for comparison operators";
         }
         return null;
     }
 
     private static String compileConditions(List<ConditionRequest> conditions) {
         return conditions.stream()
-                .map(condition -> condition.attribute().trim()
-                        + " " + regoOperator(condition.operator())
-                        + " " + condition.value())
+                .map(AbacPolicyRuleController::compileCondition)
                 .collect(Collectors.joining("\n"));
+    }
+
+    private static String compileCondition(ConditionRequest condition) {
+        String attribute = compileReference(condition.attribute());
+        String operator = regoOperator(condition.operator());
+        if (operator.equals("exists")) {
+            return attribute + " != null";
+        }
+        String value = StringUtils.hasText(condition.valueAttribute())
+                ? compileReference(condition.valueAttribute())
+                : condition.value().toString();
+        return attribute + " " + operator + " " + value;
+    }
+
+    private static String compileReference(String reference) {
+        String normalized = reference.trim();
+        if (normalized.startsWith("input.subject.")) {
+            return "verified_claims." + normalized.substring("input.subject.".length());
+        }
+        if (normalized.startsWith("subject.")) {
+            return "verified_claims." + normalized.substring("subject.".length());
+        }
+        return normalized;
+    }
+
+    private static boolean isComparisonOperator(String operator) {
+        return operator.equals("<") || operator.equals(">") || operator.equals("<=") || operator.equals(">=");
     }
 
     private static String regoOperator(String operator) {
         String normalized = normalize(operator);
         return switch (normalized) {
             case "eq", "equals", "==" -> "==";
+            case "neq", "not_equal", "!=" -> "!=";
             case "lt", "less_than", "<" -> "<";
+            case "lte", "less_than_or_equal", "<=" -> "<=";
             case "gt", "greater_than", ">" -> ">";
+            case "gte", "greater_than_or_equal", ">=" -> ">=";
+            case "in" -> "in";
+            case "exists" -> "exists";
             default -> null;
         };
+    }
+
+    private static ResponseEntity<ApiError> notFound() {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiError("Policy rule not found"));
     }
 
     private static String normalize(String value) {
@@ -155,7 +248,10 @@ public class AbacPolicyRuleController {
                                           String description) {
     }
 
-    public record ConditionRequest(String attribute, String operator, JsonNode value) {
+    public record ConditionRequest(String attribute, String operator, JsonNode value, String valueAttribute) {
+        public ConditionRequest(String attribute, String operator, JsonNode value) {
+            this(attribute, operator, value, null);
+        }
     }
 
     public record ApiError(String message) {

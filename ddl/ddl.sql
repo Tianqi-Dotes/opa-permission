@@ -128,7 +128,10 @@ INSERT INTO test.permissions (
     (22, 'Create ABAC Bucket Resource', '/api/abac/resources/buckets', 'POST', 'active', 'Register a bucket resource for the authenticated tenant', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
     (23, 'List ABAC Resources', '/api/abac/resources', 'GET', 'active', 'List resources owned by the authenticated tenant', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
     (24, 'Execute Trino SQL', '/api/trino/execute', 'POST', 'active', 'Execute one SQL statement through Trino', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
-    (25, 'Create Trino Datasource', '/api/trino/connections', 'POST', 'active', 'Register a token-authenticated Trino JDBC datasource', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT)
+    (25, 'Create Trino Datasource', '/api/trino/connections', 'POST', 'active', 'Register a token-authenticated Trino JDBC datasource', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
+    (26, 'Create ABAC Policy Rule', '/api/abac/policy-rules', 'POST', 'active', 'Create an ABAC policy rule', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
+    (27, 'Update ABAC Policy Rule', '/api/abac/policy-rules/*', 'PUT', 'active', 'Update an ABAC policy rule', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
+    (28, 'Delete ABAC Policy Rule', '/api/abac/policy-rules/*', 'DELETE', 'active', 'Delete an ABAC policy rule', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT)
 ON CONFLICT (permission_id) DO UPDATE SET
     permission_name = EXCLUDED.permission_name,
     resource_pattern = EXCLUDED.resource_pattern,

@@ -3,6 +3,7 @@ package com.opa.permission.controller;
 import com.opa.permission.service.TrinoQueryException;
 import com.opa.permission.service.TrinoQueryValidationException;
 import com.opa.permission.service.DefaultAttributeInjectionException;
+import com.opa.permission.service.OpaDecisionException;
 import com.opa.permission.service.TrinoMetadataException;
 import com.opa.permission.service.TrinoMetadataNotFoundException;
 import com.opa.permission.service.ResourceAttributeValueConflictException;
@@ -34,6 +35,12 @@ public class ApiExceptionHandler {
     public ResponseEntity<ApiError> handleTrinoMetadataFailure() {
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
                 .body(new ApiError("Trino metadata request failed"));
+    }
+
+    @ExceptionHandler(OpaDecisionException.class)
+    public ResponseEntity<ApiError> handleOpaDecisionFailure(OpaDecisionException exception) {
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                .body(new ApiError(exception.getMessage()));
     }
 
     @ExceptionHandler(ResourceAttributeValueConflictException.class)

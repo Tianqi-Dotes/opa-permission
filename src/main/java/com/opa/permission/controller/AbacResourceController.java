@@ -3,6 +3,7 @@ package com.opa.permission.controller;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.opa.permission.model.AbacResource;
 import com.opa.permission.service.AbacResourceService;
+import com.opa.permission.service.OpaDecisionService;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -10,6 +11,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -22,9 +24,12 @@ import java.time.Instant;
 @RequestMapping("/api/abac/resources")
 public class AbacResourceController {
     private final AbacResourceService abacResourceService;
+    private final OpaDecisionService opaDecisionService;
 
-    public AbacResourceController(AbacResourceService abacResourceService) {
+    public AbacResourceController(AbacResourceService abacResourceService,
+                                  OpaDecisionService opaDecisionService) {
         this.abacResourceService = abacResourceService;
+        this.opaDecisionService = opaDecisionService;
     }
 
     @GetMapping
@@ -48,6 +53,41 @@ public class AbacResourceController {
         }
         query.orderByAsc("resource_type", "resource_name", "id");
         return ResponseEntity.ok(abacResourceService.list(query));
+    }
+
+    @PostMapping("/{resourceId}/decision")
+    public ResponseEntity<?> checkDecision(@PathVariable("resourceId") Long resourceId,
+                                           @AuthenticationPrincipal Jwt jwt) {
+        if (resourceId == null || resourceId <= 0) {
+            return ResponseEntity.badRequest().body(new ApiError("resourceId must be positive"));
+        }
+        if (jwt == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new ApiError("A valid bearer token is required"));
+        }
+
+        AbacResource resource = abacResourceService.getById(resourceId);
+        if (resource == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ApiError("Resource not found"));
+        }
+        if (!StringUtils.hasText(resource.getResourceType())) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiError("Resource type is not configured"));
+        }
+        Long resourceTenantId = tenantIdFromOwner(resource.getOwner());
+        if (resourceTenantId == null) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiError("Resource owner is not a valid tenant ID"));
+        }
+
+        boolean allowed = opaDecisionService.resourceDecision(
+                "read",
+                resource.getResourceType(),
+                resourceId.toString(),
+                resourceTenantId,
+                jwt.getTokenValue());
+        return ResponseEntity.ok(new DecisionResponse(allowed));
     }
 
     @PostMapping("/buckets")
@@ -98,6 +138,21 @@ public class AbacResourceController {
     private static Long longClaim(Jwt jwt, String claimName) {
         Object claim = jwt.getClaims().get(claimName);
         return claim instanceof Number number ? number.longValue() : null;
+    }
+
+    private static Long tenantIdFromOwner(String owner) {
+        if (!StringUtils.hasText(owner)) {
+            return null;
+        }
+        try {
+            long tenantId = Long.parseLong(owner);
+            return tenantId > 0 ? tenantId : null;
+        } catch (NumberFormatException exception) {
+            return null;
+        }
+    }
+
+    public record DecisionResponse(boolean allowed) {
     }
 
     public record CreateBucketRequest(String bucketName) {

@@ -2,7 +2,7 @@ package com.opa.permission.service.impl;
 
 import com.opa.permission.service.OpaDecisionException;
 import com.opa.permission.service.OpaDecisionService;
-import com.opa.permission.service.OpaRequest;
+import com.opa.permission.entity.OpaRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
@@ -21,15 +21,41 @@ public class OpaDecisionServiceImpl implements OpaDecisionService {
     private final String decisionUrl;
 
     public OpaDecisionServiceImpl(RestClient.Builder restClientBuilder,
-                                  @Value("${opa.bucket-decision-url}") String decisionUrl) {
+                                  @Value("${opa.decision-url}") String decisionUrl) {
         this.restClient = restClientBuilder.build();
         this.decisionUrl = decisionUrl;
     }
 
     @Override
     public boolean bucketDecision(String action, Long resourceTenantId, String jwt) {
+        return decide(action, RESOURCE_TYPE_BUCKET, null, resourceTenantId, jwt);
+    }
+
+    @Override
+    public boolean resourceDecision(String action,
+                                    String resourceType,
+                                    String resourceId,
+                                    Long resourceTenantId,
+                                    String jwt) {
+        if (!StringUtils.hasText(resourceType)) {
+            throw new IllegalArgumentException("resourceType is required");
+        }
+        if (!StringUtils.hasText(resourceId)) {
+            throw new IllegalArgumentException("resourceId is required");
+        }
+        return decide(action, resourceType.trim(), resourceId.trim(), resourceTenantId, jwt);
+    }
+
+    private boolean decide(String action,
+                           String resourceType,
+                           String resourceId,
+                           Long resourceTenantId,
+                           String jwt) {
         if (!StringUtils.hasText(action)) {
             throw new IllegalArgumentException("action is required");
+        }
+        if (!StringUtils.hasText(resourceType)) {
+            throw new IllegalArgumentException("resourceType is required");
         }
         if (resourceTenantId == null || resourceTenantId <= 0) {
             throw new IllegalArgumentException("resourceTenantId must be a positive integer");
@@ -40,7 +66,8 @@ public class OpaDecisionServiceImpl implements OpaDecisionService {
 
         OpaRequest request = new OpaRequest(new OpaRequest.Input(
                 action.trim(),
-                RESOURCE_TYPE_BUCKET,
+                resourceType.trim(),
+                resourceId,
                 new OpaRequest.Resource(resourceTenantId),
                 jwt));
 
@@ -53,7 +80,7 @@ public class OpaDecisionServiceImpl implements OpaDecisionService {
                     .retrieve()
                     .body(new ParameterizedTypeReference<>() { });
         } catch (RestClientException exception) {
-            throw new OpaDecisionException("OPA bucket decision request failed", exception);
+            throw new OpaDecisionException("OPA decision request failed", exception);
         }
 
         if (response == null || !(response.get("result") instanceof Boolean allowed)) {

@@ -131,7 +131,8 @@ INSERT INTO test.permissions (
     (25, 'Create Trino Datasource', '/api/trino/connections', 'POST', 'active', 'Register a token-authenticated Trino JDBC datasource', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
     (26, 'Create ABAC Policy Rule', '/api/abac/policy-rules', 'POST', 'active', 'Create an ABAC policy rule', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
     (27, 'Update ABAC Policy Rule', '/api/abac/policy-rules/*', 'PUT', 'active', 'Update an ABAC policy rule', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
-    (28, 'Delete ABAC Policy Rule', '/api/abac/policy-rules/*', 'DELETE', 'active', 'Delete an ABAC policy rule', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT)
+    (28, 'Delete ABAC Policy Rule', '/api/abac/policy-rules/*', 'DELETE', 'active', 'Delete an ABAC policy rule', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
+    (29, 'Check ABAC Resource Decision', '/api/abac/resources/*/decision', 'POST', 'active', 'Check resource access using OPA', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT)
 ON CONFLICT (permission_id) DO UPDATE SET
     permission_name = EXCLUDED.permission_name,
     resource_pattern = EXCLUDED.resource_pattern,

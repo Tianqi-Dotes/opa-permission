@@ -28,7 +28,7 @@ public class OpaDecisionServiceImpl implements OpaDecisionService {
 
     @Override
     public boolean bucketDecision(String action, Long resourceTenantId, String jwt) {
-        return decide(action, RESOURCE_TYPE_BUCKET, null, resourceTenantId, jwt);
+        return decide(action, RESOURCE_TYPE_BUCKET, null, resourceTenantId, jwt).allowed();
     }
 
     @Override
@@ -43,14 +43,29 @@ public class OpaDecisionServiceImpl implements OpaDecisionService {
         if (!StringUtils.hasText(resourceId)) {
             throw new IllegalArgumentException("resourceId is required");
         }
+        return resourceDecisionDetails(action, resourceType, resourceId, resourceTenantId, jwt).allowed();
+    }
+
+    @Override
+    public DecisionDetails resourceDecisionDetails(String action,
+                                                   String resourceType,
+                                                   String resourceId,
+                                                   Long resourceTenantId,
+                                                   String jwt) {
+        if (!StringUtils.hasText(resourceType)) {
+            throw new IllegalArgumentException("resourceType is required");
+        }
+        if (!StringUtils.hasText(resourceId)) {
+            throw new IllegalArgumentException("resourceId is required");
+        }
         return decide(action, resourceType.trim(), resourceId.trim(), resourceTenantId, jwt);
     }
 
-    private boolean decide(String action,
-                           String resourceType,
-                           String resourceId,
-                           Long resourceTenantId,
-                           String jwt) {
+    private DecisionDetails decide(String action,
+                                   String resourceType,
+                                   String resourceId,
+                                   Long resourceTenantId,
+                                   String jwt) {
         if (!StringUtils.hasText(action)) {
             throw new IllegalArgumentException("action is required");
         }
@@ -70,6 +85,12 @@ public class OpaDecisionServiceImpl implements OpaDecisionService {
                 resourceId,
                 new OpaRequest.Resource(resourceTenantId),
                 jwt));
+        OpaRequest displayRequest = new OpaRequest(new OpaRequest.Input(
+                action.trim(),
+                resourceType.trim(),
+                resourceId,
+                new OpaRequest.Resource(resourceTenantId),
+                "[REDACTED]"));
 
         Map<String, Object> response;
         try {
@@ -86,6 +107,6 @@ public class OpaDecisionServiceImpl implements OpaDecisionService {
         if (response == null || !(response.get("result") instanceof Boolean allowed)) {
             throw new OpaDecisionException("OPA response did not contain a boolean result");
         }
-        return allowed;
+        return new DecisionDetails(allowed, decisionUrl, displayRequest, response);
     }
 }

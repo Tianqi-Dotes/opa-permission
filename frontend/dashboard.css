@@ -422,6 +422,9 @@ button {
 .trino-query-panel[hidden],
 .create-bucket-panel[hidden],
 .create-datasource-panel[hidden],
+.create-pipeline-panel[hidden],
+.pipeline-decision-results[hidden],
+.pipeline-account-result[hidden],
 .attribute-dictionary-panel[hidden],
 .resource-scope-panel[hidden],
 #resource-attribute-resource-id-field[hidden],
@@ -442,13 +445,86 @@ button {
 .assign-role-panel,
 .trino-query-panel,
 .create-bucket-panel,
-.create-datasource-panel {
+.create-datasource-panel,
+.create-pipeline-panel {
     margin-top: 18px;
     padding: 23px;
     border: 1px solid #e9edf4;
     border-radius: 13px;
     background: #fff;
     box-shadow: 0 5px 18px rgba(39, 60, 94, .035);
+}
+
+.pipeline-form-grid,
+.pipeline-decision-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+#create-pipeline-form {
+    display: grid;
+    gap: 16px;
+    margin-top: 20px;
+}
+
+.pipeline-decision-results {
+    margin-top: 20px;
+}
+
+.pipeline-decision-card,
+.pipeline-account-result {
+    padding: 16px;
+    border: 1px solid #e9edf4;
+    border-radius: 10px;
+    background: #fbfcfe;
+}
+
+.pipeline-decision-card h3,
+.pipeline-account-result h3 {
+    margin: 0 0 12px;
+    color: #27364f;
+    font-size: 13px;
+}
+
+.pipeline-decision-card p {
+    margin: 8px 0;
+    color: #64728a;
+    font-size: 11px;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+}
+
+.pipeline-decision-card h4 {
+    margin: 15px 0 7px;
+    color: #52617a;
+    font-size: 11px;
+}
+
+.pipeline-decision-card pre {
+    max-height: 280px;
+    margin: 0;
+    padding: 12px;
+    overflow: auto;
+    border: 1px solid #e5eaf2;
+    border-radius: 7px;
+    background: #f5f7fb;
+    color: #34445e;
+    font: 11px/1.6 Consolas, "Courier New", monospace;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.pipeline-account-result {
+    margin-top: 18px;
+    border-color: #b8d7c3;
+    background: #f5fbf7;
+}
+
+.pipeline-account-result code {
+    color: #267345;
+    font-size: 13px;
+    font-weight: 600;
 }
 
 .trino-query-form {
@@ -1726,8 +1802,14 @@ button {
     .assign-role-panel,
     .trino-query-panel,
     .create-bucket-panel,
-    .create-datasource-panel {
+    .create-datasource-panel,
+    .create-pipeline-panel {
         padding: 18px;
+    }
+
+    .pipeline-form-grid,
+    .pipeline-decision-grid {
+        grid-template-columns: 1fr;
     }
 
     .assign-role-header {

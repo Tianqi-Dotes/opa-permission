@@ -10,7 +10,7 @@ services:
       http_proxy: "http://http.docker.internal:3128"
       https_proxy: "http://http.docker.internal:3128"
       all_proxy: "http://http.docker.internal:3128"
-      JWT_SECRET_BASE64: ${JWT_SECRET_BASE64:?Set it to the same Base64 secret used by Spring}
+      JWT_SECRET_BASE64: "DzrR/mocT7yf8TWgPmgqsrJ8OL4FiaE4Tqgd3VbKb8g="
     ports:
       - "8181:8181"
     mem_limit: 256m
@@ -23,8 +23,8 @@ services:
       - --set=services.github.credentials.bearer.token_path=/run/secrets/github_token
       - --set=bundles.authorization.service=github
       - --set=bundles.authorization.resource=Tianqi-Dotes/opa-permission/master/bundle.tar.gz
-      - --set=bundles.authorization.polling.min_delay_seconds=60
-      - --set=bundles.authorization.polling.max_delay_seconds=120
+      - --set=bundles.authorization.polling.min_delay_seconds=20
+      - --set=bundles.authorization.polling.max_delay_seconds=30
       - --set=decision_logs.console=true
 
 secrets:

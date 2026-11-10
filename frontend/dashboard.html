@@ -76,10 +76,6 @@
                         <span class="nav-icon" aria-hidden="true">QT</span>
                         <span>Query Trino</span>
                     </button>
-                    <button class="nav-item" type="button" data-page="create-trino-table">
-                        <span class="nav-icon" aria-hidden="true">CT</span>
-                        <span>Create Trino Table</span>
-                    </button>
                     <button class="nav-item" type="button" data-page="create-datasource">
                         <span class="nav-icon" aria-hidden="true">DS</span>
                         <span>Create Datasource</span>
@@ -87,6 +83,10 @@
                     <button class="nav-item" type="button" data-page="create-bucket">
                         <span class="nav-icon" aria-hidden="true">CB</span>
                         <span>Create Bucket</span>
+                    </button>
+                    <button class="nav-item" type="button" data-page="create-pipeline">
+                        <span class="nav-icon" aria-hidden="true">CP</span>
+                        <span>Create Pipeline</span>
                     </button>
                 </div>
             </section>
@@ -546,6 +546,68 @@
                 <p class="assign-role-status" id="create-datasource-status" role="status" aria-live="polite">
                     Enter a name and a TLS-enabled Trino JDBC URL.
                 </p>
+            </section>
+
+            <section class="create-pipeline-panel" id="create-pipeline-panel" hidden
+                     aria-labelledby="create-pipeline-title">
+                <div class="assign-role-header">
+                    <div>
+                        <h2 id="create-pipeline-title">Create a pipeline</h2>
+                        <p>Select source and target buckets. Both must pass OPA authorization.</p>
+                    </div>
+                </div>
+                <form id="create-pipeline-form">
+                    <div class="pipeline-form-grid">
+                        <label class="form-field" for="pipeline-source">
+                            <span>Source bucket</span>
+                            <select id="pipeline-source" name="source" required disabled>
+                                <option value="">Loading bucket list...</option>
+                            </select>
+                        </label>
+                        <label class="form-field" for="pipeline-target">
+                            <span>Target bucket</span>
+                            <select id="pipeline-target" name="target" required disabled>
+                                <option value="">Loading bucket list...</option>
+                            </select>
+                        </label>
+                    </div>
+                    <button class="primary-button" id="create-pipeline-submit" type="submit" disabled>
+                        Create Pipeline
+                    </button>
+                </form>
+                <p class="assign-role-status" id="create-pipeline-status" role="status" aria-live="polite">
+                    Choose source and target buckets to begin.
+                </p>
+                <section class="pipeline-decision-results" id="pipeline-decision-results" hidden
+                         aria-label="OPA authorization details">
+                    <p class="assign-role-status">
+                        The displayed OPA request body redacts the JWT value.
+                    </p>
+                    <div class="pipeline-decision-grid">
+                        <article class="pipeline-decision-card">
+                            <h3>Source authorization</h3>
+                            <p><strong>Authorization API:</strong> <code id="pipeline-source-api-url">Not called</code></p>
+                            <p><strong>OPA request URL:</strong> <code id="pipeline-source-opa-url">Not returned</code></p>
+                            <h4>OPA request body</h4>
+                            <pre id="pipeline-source-request-body">Not called.</pre>
+                            <h4>OPA response body</h4>
+                            <pre id="pipeline-source-response-body">Not called.</pre>
+                        </article>
+                        <article class="pipeline-decision-card">
+                            <h3>Target authorization</h3>
+                            <p><strong>Authorization API:</strong> <code id="pipeline-target-api-url">Not called</code></p>
+                            <p><strong>OPA request URL:</strong> <code id="pipeline-target-opa-url">Not returned</code></p>
+                            <h4>OPA request body</h4>
+                            <pre id="pipeline-target-request-body">Not called.</pre>
+                            <h4>OPA response body</h4>
+                            <pre id="pipeline-target-response-body">Not called.</pre>
+                        </article>
+                    </div>
+                </section>
+                <div class="pipeline-account-result" id="pipeline-account-result" hidden>
+                    <h3>Generated SA account</h3>
+                    <code id="pipeline-account-name"></code>
+                </div>
             </section>
 
             <section class="attribute-dictionary-panel" id="resource-attributes-panel" hidden

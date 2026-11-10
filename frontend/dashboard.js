@@ -87,14 +87,6 @@ const pages = {
         featureDescription: "Run SQL statements through Trino with OPA authorization.",
         symbol: "QT"
     },
-    "create-trino-table": {
-        section: "Workspace",
-        title: "Create Trino Table",
-        description: "Create and manage tables in your Trino data catalogs.",
-        featureTitle: "Table management",
-        featureDescription: "Table management tools will be available here.",
-        symbol: "CT"
-    },
     "create-datasource": {
         section: "Workspace",
         title: "Create Datasource",
@@ -110,6 +102,14 @@ const pages = {
         featureTitle: "Create bucket",
         featureDescription: "Register a bucket resource for the current tenant.",
         symbol: "CB"
+    },
+    "create-pipeline": {
+        section: "Workspace",
+        title: "Create Pipeline",
+        description: "Create and manage data pipelines in your workspace.",
+        featureTitle: "Pipeline creation",
+        featureDescription: "Pipeline configuration tools will be available here.",
+        symbol: "CP"
     }
 };
 
@@ -290,6 +290,29 @@ const datasourceConnectionName = document.querySelector("#datasource-connection-
 const datasourceJdbcUrl = document.querySelector("#datasource-jdbc-url");
 const createDatasourceSubmit = document.querySelector("#create-datasource-submit");
 const createDatasourceStatus = document.querySelector("#create-datasource-status");
+const createPipelinePanel = document.querySelector("#create-pipeline-panel");
+const createPipelineForm = document.querySelector("#create-pipeline-form");
+const pipelineSourceSelect = document.querySelector("#pipeline-source");
+const pipelineTargetSelect = document.querySelector("#pipeline-target");
+const createPipelineSubmit = document.querySelector("#create-pipeline-submit");
+const createPipelineStatus = document.querySelector("#create-pipeline-status");
+const pipelineDecisionResults = document.querySelector("#pipeline-decision-results");
+const pipelineAccountResult = document.querySelector("#pipeline-account-result");
+const pipelineAccountName = document.querySelector("#pipeline-account-name");
+const pipelineDecisionViews = {
+    source: {
+        apiUrl: document.querySelector("#pipeline-source-api-url"),
+        opaUrl: document.querySelector("#pipeline-source-opa-url"),
+        requestBody: document.querySelector("#pipeline-source-request-body"),
+        responseBody: document.querySelector("#pipeline-source-response-body")
+    },
+    target: {
+        apiUrl: document.querySelector("#pipeline-target-api-url"),
+        opaUrl: document.querySelector("#pipeline-target-opa-url"),
+        requestBody: document.querySelector("#pipeline-target-request-body"),
+        responseBody: document.querySelector("#pipeline-target-response-body")
+    }
+};
 
 const apiBaseUrl = (window.API_BASE_URL || "http://localhost:1111").replace(/\/+$/, "");
 const trinoPermissionTests = [
@@ -332,6 +355,9 @@ let policyRuleSaveInProgress = false;
 let policyRuleDeleteInProgress = false;
 let bucketCreationInProgress = false;
 let datasourceCreationInProgress = false;
+let pipelineBucketRequestId = 0;
+let pipelineCreationInProgress = false;
+let pipelineBuckets = [];
 let resourceAttributeDefinitions = [];
 let resourceAttributeListRequestId = 0;
 let resourceAttributeMutationInProgress = false;
@@ -415,15 +441,16 @@ function showPage(pageKey) {
     const isPolicyConfigPage = pageKey === "policy-config";
     const isCreateBucketPage = pageKey === "create-bucket";
     const isCreateDatasourcePage = pageKey === "create-datasource";
+    const isCreatePipelinePage = pageKey === "create-pipeline";
     const isTrinoQueryPage = pageKey === "query-trino";
     featureCard.hidden = isAssignRolesPage || isPermissionTestPage
         || isAttributeDictionaryPage || isAttributeTemplatesPage || isSubjectAttributesPage
         || isResourceAttributesPage || isPolicyConfigPage || isCreateBucketPage
-        || isCreateDatasourcePage || isTrinoQueryPage;
+        || isCreateDatasourcePage || isCreatePipelinePage || isTrinoQueryPage;
     infoRow.hidden = isAssignRolesPage || isPermissionTestPage
         || isAttributeDictionaryPage || isAttributeTemplatesPage || isSubjectAttributesPage
         || isResourceAttributesPage || isPolicyConfigPage || isCreateBucketPage
-        || isCreateDatasourcePage || isTrinoQueryPage;
+        || isCreateDatasourcePage || isCreatePipelinePage || isTrinoQueryPage;
     assignRolePanel.hidden = !isAssignRolesPage;
     permissionTestPanel.hidden = !isPermissionTestPage;
     trinoQueryPanel.hidden = !isTrinoQueryPage;
@@ -434,6 +461,7 @@ function showPage(pageKey) {
     policyConfigPanel.hidden = !isPolicyConfigPage;
     createBucketPanel.hidden = !isCreateBucketPage;
     createDatasourcePanel.hidden = !isCreateDatasourcePage;
+    createPipelinePanel.hidden = !isCreatePipelinePage;
     if (isAssignRolesPage) {
         loadUsers();
     }
@@ -452,6 +480,9 @@ function showPage(pageKey) {
     if (isPolicyConfigPage) {
         loadPolicyResources();
         loadPolicyAttributeDefinitions();
+    }
+    if (isCreatePipelinePage) {
+        loadPipelineBuckets();
     }
 
     navItems.forEach((item) => {
@@ -559,6 +590,170 @@ async function createDatasource(event) {
     } finally {
         datasourceCreationInProgress = false;
         createDatasourceSubmit.disabled = false;
+    }
+}
+
+function populatePipelineBucketSelect(select, buckets) {
+    select.replaceChildren(new Option("Select a bucket", ""));
+    buckets.forEach((bucket) => {
+        const label = `${bucket.resourceName || `Bucket ${bucket.id}`} (ID: ${bucket.id})`;
+        select.add(new Option(label, String(bucket.id)));
+    });
+    select.disabled = buckets.length === 0;
+}
+
+async function loadPipelineBuckets() {
+    const requestId = ++pipelineBucketRequestId;
+    pipelineSourceSelect.disabled = true;
+    pipelineTargetSelect.disabled = true;
+    createPipelineSubmit.disabled = true;
+    pipelineSourceSelect.replaceChildren(new Option("Loading bucket list...", ""));
+    pipelineTargetSelect.replaceChildren(new Option("Loading bucket list...", ""));
+    createPipelineStatus.textContent = "Loading active buckets...";
+
+    try {
+        const response = await fetch(`${apiBaseUrl}/api/abac/resources?external=false`, {
+            headers: {Authorization: `Bearer ${token}`}
+        });
+        if (!response.ok) {
+            throw new Error(await getApiError(response));
+        }
+
+        const resources = await response.json();
+        if (!Array.isArray(resources)) {
+            throw new Error("The resource API returned an invalid bucket list.");
+        }
+        if (requestId !== pipelineBucketRequestId) {
+            return;
+        }
+
+        pipelineBuckets = resources.filter((resource) =>
+            String(resource.resourceType).toLowerCase() === "bucket"
+            && String(resource.status).toLowerCase() === "active");
+        populatePipelineBucketSelect(pipelineSourceSelect, pipelineBuckets);
+        populatePipelineBucketSelect(pipelineTargetSelect, pipelineBuckets);
+        createPipelineSubmit.disabled = pipelineBuckets.length === 0;
+        createPipelineStatus.textContent = pipelineBuckets.length
+            ? "Select a source and target bucket."
+            : "No active buckets found. Create a bucket before creating a pipeline.";
+    } catch (error) {
+        if (requestId !== pipelineBucketRequestId) {
+            return;
+        }
+        pipelineBuckets = [];
+        pipelineSourceSelect.replaceChildren(new Option("Unable to load buckets", ""));
+        pipelineTargetSelect.replaceChildren(new Option("Unable to load buckets", ""));
+        createPipelineStatus.textContent = error.message || "Unable to load buckets.";
+    }
+}
+
+function formatPipelineJson(value) {
+    return JSON.stringify(value, null, 2) ?? String(value);
+}
+
+async function readResponseBody(response) {
+    const text = await response.text();
+    if (!text) {
+        return null;
+    }
+    try {
+        return JSON.parse(text);
+    } catch {
+        return {raw: text};
+    }
+}
+
+async function checkPipelineBucket(scope, bucket) {
+    const view = pipelineDecisionViews[scope];
+    const apiUrl = `${apiBaseUrl}/api/abac/resources/${encodeURIComponent(bucket.id)}/decision`;
+    view.apiUrl.textContent = apiUrl;
+    view.opaUrl.textContent = "Waiting for backend response...";
+    view.requestBody.textContent = "Waiting for OPA request details...";
+    view.responseBody.textContent = "Authorization request in progress...";
+
+    try {
+        const response = await fetch(apiUrl, {
+            method: "POST",
+            headers: {Authorization: `Bearer ${token}`}
+        });
+        const body = await readResponseBody(response);
+        if (body && typeof body === "object") {
+            if (typeof body.requestUrl === "string") {
+                view.opaUrl.textContent = body.requestUrl;
+            }
+            if (body.requestBody !== undefined) {
+                view.requestBody.textContent = formatPipelineJson(body.requestBody);
+            } else {
+                view.requestBody.textContent = "OPA request details were not returned.";
+            }
+            view.responseBody.textContent = formatPipelineJson(body.responseBody ?? body);
+        } else {
+            view.responseBody.textContent = formatPipelineJson(body);
+        }
+
+        return {
+            allowed: response.ok && body !== null && typeof body.allowed === "boolean" && body.allowed
+        };
+    } catch (error) {
+        view.requestBody.textContent = "OPA request details were not returned.";
+        view.responseBody.textContent = formatPipelineJson({
+            error: error.message || "Authorization request failed."
+        });
+        return {allowed: false};
+    }
+}
+
+function generatePipelineServiceAccount() {
+    const randomBytes = new Uint8Array(8);
+    window.crypto.getRandomValues(randomBytes);
+    const suffix = Array.from(randomBytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+    return `sa_${suffix}`;
+}
+
+async function createPipeline(event) {
+    event.preventDefault();
+    if (pipelineCreationInProgress || !createPipelineForm.reportValidity()) {
+        return;
+    }
+
+    const sourceBucket = pipelineBuckets.find((bucket) =>
+        String(bucket.id) === pipelineSourceSelect.value);
+    const targetBucket = pipelineBuckets.find((bucket) =>
+        String(bucket.id) === pipelineTargetSelect.value);
+    if (!sourceBucket || !targetBucket) {
+        createPipelineStatus.textContent = "Select valid source and target buckets.";
+        return;
+    }
+
+    pipelineCreationInProgress = true;
+    createPipelineSubmit.disabled = true;
+    createPipelineStatus.textContent = "Checking source and target bucket access with OPA...";
+    pipelineDecisionResults.hidden = false;
+    pipelineAccountResult.hidden = true;
+
+    Object.values(pipelineDecisionViews).forEach((view) => {
+        view.apiUrl.textContent = "Not called";
+        view.opaUrl.textContent = "Not returned";
+        view.requestBody.textContent = "Not called.";
+        view.responseBody.textContent = "Not called.";
+    });
+
+    try {
+        const [sourceDecision, targetDecision] = await Promise.all([
+            checkPipelineBucket("source", sourceBucket),
+            checkPipelineBucket("target", targetBucket)
+        ]);
+        if (sourceDecision.allowed && targetDecision.allowed) {
+            pipelineAccountName.textContent = generatePipelineServiceAccount();
+            pipelineAccountResult.hidden = false;
+            createPipelineStatus.textContent = "Both bucket checks passed. The SA account was generated.";
+        } else {
+            createPipelineStatus.textContent =
+                "Pipeline was not created because OPA denied access to the source or target bucket.";
+        }
+    } finally {
+        pipelineCreationInProgress = false;
+        createPipelineSubmit.disabled = pipelineBuckets.length === 0;
     }
 }
 
@@ -3220,6 +3415,7 @@ externalResourceTab.addEventListener("click", () => activateResourceScopeTab(ext
 });
 createBucketForm.addEventListener("submit", createBucket);
 createDatasourceForm.addEventListener("submit", createDatasource);
+createPipelineForm.addEventListener("submit", createPipeline);
 filterResourceAttributesButton.addEventListener("click", loadResourceAttributeValues);
 refreshInternalResourcesButton.addEventListener("click", () => loadResourceList("internal"));
 refreshExternalResourcesButton.addEventListener("click", () => loadResourceList("external"));

@@ -1,6 +1,7 @@
 package com.opa.permission.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.opa.permission.entity.OpaRequest;
 import com.opa.permission.model.AbacResource;
 import com.opa.permission.service.AbacResourceService;
 import com.opa.permission.service.OpaDecisionService;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Instant;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/abac/resources")
@@ -81,13 +83,17 @@ public class AbacResourceController {
                     .body(new ApiError("Resource owner is not a valid tenant ID"));
         }
 
-        boolean allowed = opaDecisionService.resourceDecision(
+        OpaDecisionService.DecisionDetails decision = opaDecisionService.resourceDecisionDetails(
                 "read",
                 resource.getResourceType(),
                 resourceId.toString(),
                 resourceTenantId,
                 jwt.getTokenValue());
-        return ResponseEntity.ok(new DecisionResponse(allowed));
+        return ResponseEntity.ok(new DecisionResponse(
+                decision.allowed(),
+                decision.requestUrl(),
+                decision.requestBody(),
+                decision.responseBody()));
     }
 
     @PostMapping("/buckets")
@@ -152,7 +158,10 @@ public class AbacResourceController {
         }
     }
 
-    public record DecisionResponse(boolean allowed) {
+    public record DecisionResponse(boolean allowed,
+                                   String requestUrl,
+                                   OpaRequest requestBody,
+                                   Map<String, Object> responseBody) {
     }
 
     public record CreateBucketRequest(String bucketName) {

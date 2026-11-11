@@ -245,6 +245,7 @@ const policyStaticDataEditor = document.querySelector("#policy-static-data-edito
 const policyStaticDataJson = document.querySelector("#policy-static-data-json");
 const validatePolicyConfigButton = document.querySelector("#validate-policy-config");
 const generatePolicyRegoButton = document.querySelector("#generate-policy-rego");
+const submitPolicyButton = document.querySelector("#submit-policy");
 const policyValidationList = document.querySelector("#policy-validation-list");
 const policyRegoPreview = document.querySelector("#policy-rego-preview");
 const policyDataPreview = document.querySelector("#policy-data-preview");
@@ -351,8 +352,9 @@ let editingPolicyConditions = [];
 let policyGenerated = false;
 let policyAttributeRequestId = 0;
 let policyResourceRequestId = 0;
-let policyRuleSaveInProgress = false;
-let policyRuleDeleteInProgress = false;
+let policySubmissionInProgress = false;
+let lastSubmittedPolicyRequest = null;
+let lastSubmittedPolicyCode = null;
 let bucketCreationInProgress = false;
 let datasourceCreationInProgress = false;
 let pipelineBucketRequestId = 0;
@@ -1378,32 +1380,47 @@ function renderPolicyConditionRows() {
         attributeLabel.className = "form-field";
         const attributeCaption = document.createElement("span");
         const selectedSource = policyAttributeSources.find(([value]) => value === selectedCategory);
-        attributeCaption.textContent = `${selectedSource[1]} attribute`;
-        const attributeSelect = document.createElement("select");
-        attributeSelect.required = true;
-        const sourceDefinitions = policyAttributeDefinitions
-            .filter((definition) => definition.category === selectedCategory);
-        attributeSelect.append(new Option(
-            sourceDefinitions.length
-                ? `Select a ${selectedSource[1].toLowerCase()} attribute`
-                : `No ${selectedSource[1].toLowerCase()} attributes defined`,
-            ""
-        ));
-        sourceDefinitions.forEach((definition) => {
+        let attributeSelect = null;
+        if (selectedCategory === "action") {
+            condition.attribute = "action";
+            condition.valueType = "constant";
+            condition.valueAttribute = "";
+            attributeCaption.textContent = "Action";
+            const actionName = document.createElement("span");
+            actionName.textContent = "action";
+            attributeLabel.append(attributeCaption, actionName);
+        } else {
+            attributeCaption.textContent = `${selectedSource[1]} attribute`;
+            attributeSelect = document.createElement("select");
+            attributeSelect.required = true;
+            const sourceDefinitions = policyAttributeDefinitions
+                .filter((definition) => definition.category === selectedCategory);
             attributeSelect.append(new Option(
-                `${definition.name} (${definition.dataType})`,
-                `${selectedCategory}.${definition.name}`
+                sourceDefinitions.length
+                    ? `Select a ${selectedSource[1].toLowerCase()} attribute`
+                    : `No ${selectedSource[1].toLowerCase()} attributes defined`,
+                ""
             ));
-        });
-        attributeSelect.value = condition.attribute;
-        attributeSelect.addEventListener("change", () => {
-            condition.attribute = attributeSelect.value;
-            invalidatePolicyPreview();
-        });
-        attributeLabel.append(attributeCaption, attributeSelect);
+            sourceDefinitions.forEach((definition) => {
+                attributeSelect.append(new Option(
+                    `${definition.name} (${definition.dataType})`,
+                    `${selectedCategory}.${definition.name}`
+                ));
+            });
+            attributeSelect.value = condition.attribute;
+            attributeSelect.addEventListener("change", () => {
+                condition.attribute = attributeSelect.value;
+                invalidatePolicyPreview();
+            });
+            attributeLabel.append(attributeCaption, attributeSelect);
+        }
         categorySelect.addEventListener("change", () => {
             condition.attributeCategory = categorySelect.value;
-            condition.attribute = "";
+            condition.attribute = categorySelect.value === "action" ? "action" : "";
+            if (categorySelect.value === "action") {
+                condition.valueType = "constant";
+                condition.valueAttribute = "";
+            }
             renderPolicyConditionRows();
             invalidatePolicyPreview();
         });
@@ -1482,11 +1499,14 @@ function renderPolicyConditionRows() {
 
         function updateValueVisibility() {
             const operatorHasValue = condition.operator !== "exists";
-            valueTypeLabel.hidden = !operatorHasValue;
-            resourceAttributeLabel.hidden = !operatorHasValue || condition.valueType !== "resource";
-            valueLabel.hidden = !operatorHasValue || condition.valueType !== "constant";
-            resourceAttributeSelect.required =
-                operatorHasValue && condition.valueType === "resource";
+            const fixedActionValue = selectedCategory === "action";
+            valueTypeLabel.hidden = !operatorHasValue || fixedActionValue;
+            resourceAttributeLabel.hidden = fixedActionValue
+                || !operatorHasValue || condition.valueType !== "resource";
+            valueLabel.hidden = !operatorHasValue
+                || (!fixedActionValue && condition.valueType !== "constant");
+            resourceAttributeSelect.required = !fixedActionValue
+                && operatorHasValue && condition.valueType === "resource";
             valueInput.required = operatorHasValue && condition.valueType === "constant";
         }
         updateValueVisibility();
@@ -1526,9 +1546,6 @@ function renderPolicyRuleEditor(rule) {
 }
 
 function selectPolicyRule(ruleId) {
-    if (policyRuleSaveInProgress || policyRuleDeleteInProgress) {
-        return;
-    }
     const rule = policyRules.find((candidate) => candidate.id === ruleId);
     if (!rule) {
         return;
@@ -1543,9 +1560,6 @@ function selectPolicyRule(ruleId) {
 }
 
 function addPolicyRule() {
-    if (policyRuleSaveInProgress || policyRuleDeleteInProgress) {
-        return;
-    }
     if (selectedPolicyRule() && !applyPolicyRuleChanges()) {
         return;
     }
@@ -1590,7 +1604,7 @@ function applyPolicyRuleChanges() {
     rule.rowFilterExpression = policyRowFilterExpression.value;
     rule.columnMaskExpression = policyColumnMaskExpression.value;
     renderPolicyRuleList();
-    policyEditorStatus.textContent = "Rule changes applied to the local draft.";
+    policyEditorStatus.textContent = "Rule changes applied to the local draft. Submit the policy to save it.";
     invalidatePolicyPreview();
     return true;
 }
@@ -1649,102 +1663,19 @@ function ensurePolicySession() {
     return false;
 }
 
-async function saveSelectedPolicyRule() {
-    if (policyRuleSaveInProgress || policyRuleDeleteInProgress) {
-        return;
-    }
+function saveSelectedPolicyRule() {
     const rule = selectedPolicyRule();
     if (!rule || !applyPolicyRuleChanges()) {
         return;
     }
-    if (!ensurePolicySession()) {
-        return;
-    }
-
-    policyRuleSaveInProgress = true;
-    const controls = Array.from(policyRuleForm.querySelectorAll("input, select, textarea, button"));
-    const disabledStates = controls.map((control) => control.disabled);
-    controls.forEach((control) => {
-        control.disabled = true;
-    });
-    policyEditorStatus.textContent = "Saving rule to the backend...";
-    try {
-        const isEditing = rule.backendId !== undefined && rule.backendId !== null;
-        const path = isEditing
-            ? `/api/abac/policy-rules/${encodeURIComponent(String(rule.backendId))}`
-            : "/api/abac/policy-rules";
-        const response = await fetch(`${apiBaseUrl}${path}`, {
-            method: isEditing ? "PUT" : "POST",
-            headers: {
-                Authorization: `Bearer ${token}`,
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(policyRuleApiPayload(rule))
-        });
-        if (!response.ok) {
-            throw new Error(await getApiError(response));
-        }
-        const savedRule = await response.json();
-        if (!savedRule || savedRule.id === undefined || savedRule.id === null
-                || !savedRule.ruleCode) {
-            throw new Error("The backend returned an incomplete policy rule response.");
-        }
-        rule.backendId = savedRule.id;
-        rule.ruleCode = savedRule.ruleCode;
-        rule.conditionStr = savedRule.conditionStr;
-        renderPolicyRuleList();
-        policyEditorStatus.textContent = `Rule ${rule.ruleCode} was saved to the backend.`;
-        policyConfigStatus.textContent =
-            "Rule saved to the backend. Static data and generated artifacts remain local drafts.";
-    } catch (error) {
-        const message = error instanceof Error ? error.message : "Could not save the policy rule.";
-        policyEditorStatus.textContent = message;
-        policyConfigStatus.textContent = `Could not save the rule: ${message}`;
-    } finally {
-        controls.forEach((control, index) => {
-            control.disabled = disabledStates[index];
-        });
-        policyRuleSaveInProgress = false;
-    }
+    policyEditorStatus.textContent = "Rule changes applied to the local draft. Submit the policy to save it.";
+    policyConfigStatus.textContent = "Rule changes are in the local draft and have not been submitted.";
 }
 
-async function deleteSelectedPolicyRule() {
-    if (policyRuleSaveInProgress || policyRuleDeleteInProgress) {
-        return;
-    }
+function deleteSelectedPolicyRule() {
     const rule = selectedPolicyRule();
-    const isPersisted = rule && rule.backendId !== undefined && rule.backendId !== null;
-    const deleteScope = isPersisted ? "from the local draft and backend" : "from this local draft";
-    if (!rule || !window.confirm(`Delete rule "${rule.ruleName}" ${deleteScope}?`)) {
+    if (!rule || !window.confirm(`Delete rule "${rule.ruleName}" from the local draft?`)) {
         return;
-    }
-    if (isPersisted) {
-        if (!ensurePolicySession()) {
-            return;
-        }
-        policyRuleDeleteInProgress = true;
-        deletePolicyRuleButton.disabled = true;
-        policyEditorStatus.textContent = "Deleting rule from the backend...";
-        try {
-            const response = await fetch(
-                `${apiBaseUrl}/api/abac/policy-rules/${encodeURIComponent(String(rule.backendId))}`,
-                {
-                    method: "DELETE",
-                    headers: {Authorization: `Bearer ${token}`}
-                }
-            );
-            if (!response.ok) {
-                throw new Error(await getApiError(response));
-            }
-        } catch (error) {
-            const message = error instanceof Error ? error.message : "Could not delete the policy rule.";
-            policyEditorStatus.textContent = message;
-            policyConfigStatus.textContent = `Could not delete the rule: ${message}`;
-            deletePolicyRuleButton.disabled = false;
-            policyRuleDeleteInProgress = false;
-            return;
-        }
-        policyRuleDeleteInProgress = false;
     }
     policyRules = policyRules.filter((candidate) => candidate.id !== rule.id);
     selectedPolicyRuleId = null;
@@ -1752,11 +1683,81 @@ async function deleteSelectedPolicyRule() {
     renderPolicyRuleEditor(null);
     renderPolicyRuleList();
     invalidatePolicyPreview();
-    policyConfigStatus.textContent = isPersisted
-        ? "Rule deleted from the local draft and backend."
-        : "Rule deleted from the local draft.";
+    policyConfigStatus.textContent = "Rule deleted from the local draft.";
 }
 
+async function submitPolicy() {
+    if (policySubmissionInProgress || !validateCurrentPolicyDraft(false)) {
+        return;
+    }
+    if (!ensurePolicySession()) {
+        return;
+    }
+
+    let requestBody;
+    try {
+        requestBody = JSON.stringify({
+            policyName: policyConfigName.value.trim(),
+            combiningAlgorithm: "first_applicable",
+            resourceId: Number(policyResourceSelect.value),
+            rules: policyRules.map(policyRuleApiPayload)
+        });
+    } catch (error) {
+        const message = error instanceof Error ? error.message : "Could not prepare the policy request.";
+        policyConfigStatus.textContent = `Could not submit policy: ${message}`;
+        return;
+    }
+    if (requestBody === lastSubmittedPolicyRequest) {
+        policyConfigStatus.textContent =
+            `This policy draft was already submitted as ${lastSubmittedPolicyCode}. Change the policy before submitting again.`;
+        return;
+    }
+
+    policySubmissionInProgress = true;
+    const controls = Array.from(policyConfigPanel.querySelectorAll("input, select, textarea, button"));
+    const disabledStates = controls.map((control) => control.disabled);
+    controls.forEach((control) => {
+        control.disabled = true;
+    });
+    policyConfigStatus.textContent = "Submitting policy, resource binding, and rules...";
+    try {
+        const response = await fetch(`${apiBaseUrl}/api/abac/policies`, {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json"
+            },
+            body: requestBody
+        });
+        if (!response.ok) {
+            throw new Error(await getApiError(response));
+        }
+        const result = await response.json();
+        if (!result || !result.policy || !result.policy.policyCode
+                || !Array.isArray(result.rules) || result.rules.length !== policyRules.length) {
+            throw new Error("The backend returned an incomplete policy response.");
+        }
+        result.rules.forEach((savedRule, index) => {
+            if (savedRule.id === undefined || savedRule.id === null || !savedRule.ruleCode) {
+                throw new Error("The backend returned an incomplete policy rule response.");
+            }
+            policyRules[index].ruleCode = savedRule.ruleCode;
+        });
+        lastSubmittedPolicyRequest = requestBody;
+        lastSubmittedPolicyCode = result.policy.policyCode;
+        renderPolicyRuleList();
+        policyConfigStatus.textContent =
+            `Policy ${result.policy.policyCode} and ${result.rules.length} rule${result.rules.length === 1 ? "" : "s"} submitted. Generated artifacts remain local drafts.`;
+    } catch (error) {
+        const message = error instanceof Error ? error.message : "Could not submit the policy.";
+        policyConfigStatus.textContent = `Could not submit policy: ${message}`;
+    } finally {
+        controls.forEach((control, index) => {
+            control.disabled = disabledStates[index];
+        });
+        policySubmissionInProgress = false;
+    }
+}
 function parsePolicyConditionValue(condition) {
     if (condition.operator === "exists") {
         return null;
@@ -1772,13 +1773,16 @@ function parsePolicyConditionValue(condition) {
     }
 }
 
-function validatePolicyConfiguration() {
+function validatePolicyConfiguration(validateStaticData = true) {
     const errors = [];
     if (!policyConfigName.value.trim()) {
-        errors.push("Configuration name is required.");
+        errors.push("Policy name is required.");
     }
     if (!policyResourceSelect.value) {
         errors.push("Select a resource scope.");
+    } else if (!Number.isSafeInteger(Number(policyResourceSelect.value))
+            || Number(policyResourceSelect.value) <= 0) {
+        errors.push("The selected resource ID must be a positive safe integer.");
     }
     if (policyRules.length === 0) {
         errors.push("Add at least one rule.");
@@ -1788,9 +1792,6 @@ function validatePolicyConfiguration() {
     }
 
     policyRules.forEach((rule) => {
-        if (!rule.enabled) {
-            return;
-        }
         if (!rule.ruleName.trim()) {
             errors.push(`${rule.ruleCode}: rule name is required.`);
         }
@@ -1798,11 +1799,15 @@ function validatePolicyConfiguration() {
             errors.push(`${rule.ruleCode}: add at least one condition.`);
         }
         rule.conditions.forEach((condition, index) => {
-            const subjectAttributeExists = policyAttributeDefinitions.some((definition) =>
-                definition.category === "subject"
-                && `subject.${definition.name}` === condition.attribute);
-            if (!subjectAttributeExists) {
-                errors.push(`${rule.ruleCode}, condition ${index + 1}: select a subject dictionary attribute.`);
+            const category = policyConditionCategory(condition);
+            const attributeName = condition.attribute.split(".").slice(1).join(".");
+            const source = policyAttributeSources.find(([value]) => value === category);
+            const attributeExists = category === "action"
+                ? condition.attribute === "action"
+                : policyAttributeDefinitions.some((definition) =>
+                    definition.category === category && definition.name === attributeName);
+            if (!attributeExists) {
+                errors.push(`${rule.ruleCode}, condition ${index + 1}: select a ${source[1].toLowerCase()} dictionary attribute.`);
             }
             if (condition.operator !== "exists") {
                 if (condition.valueType === "resource") {
@@ -1835,7 +1840,7 @@ function validatePolicyConfiguration() {
             errors.push(`${rule.ruleCode}: enter a column masking expression.`);
         }
     });
-    if (policyStaticDataEnabled.checked) {
+    if (validateStaticData && policyStaticDataEnabled.checked) {
         try {
             const data = JSON.parse(policyStaticDataJson.value);
             if (!data || typeof data !== "object" || Array.isArray(data)) {
@@ -1853,7 +1858,7 @@ function renderPolicyValidation(errors) {
     if (errors.length === 0) {
         const item = document.createElement("li");
         item.className = "is-success";
-        item.textContent = "Configuration is valid and ready for artifact preview.";
+        item.textContent = "Configuration is valid and ready to generate artifacts or submit.";
         policyValidationList.append(item);
         return;
     }
@@ -1957,18 +1962,18 @@ function policyDecisionPayload(rule) {
     return {allow: true, type: "allow"};
 }
 
-function validateCurrentPolicyDraft() {
+function validateCurrentPolicyDraft(validateStaticData = true) {
     if (!applyPolicyRuleChanges()) {
         renderPolicyValidation(["Fix the selected rule fields before validating the configuration."]);
         return false;
     }
-    const errors = validatePolicyConfiguration();
+    const errors = validatePolicyConfiguration(validateStaticData);
     renderPolicyValidation(errors);
     if (errors.length > 0) {
         policyConfigStatus.textContent = "Validation found issues in the local draft.";
         return false;
     }
-    policyConfigStatus.textContent = "Validation passed. The local draft is ready for artifact preview.";
+    policyConfigStatus.textContent = "Validation passed. The draft is ready to preview or submit.";
     return true;
 }
 
@@ -3428,6 +3433,7 @@ deletePolicyRuleButton.addEventListener("click", deleteSelectedPolicyRule);
 policyConfigName.addEventListener("input", invalidatePolicyPreview);
 validatePolicyConfigButton.addEventListener("click", validateCurrentPolicyDraft);
 generatePolicyRegoButton.addEventListener("click", generatePolicyPreview);
+submitPolicyButton.addEventListener("click", submitPolicy);
 defaultTemplateTab.addEventListener("click", () => activateAttributeTemplateTab(defaultTemplateTab));
 tenantTemplateTab.addEventListener("click", () => activateAttributeTemplateTab(tenantTemplateTab));
 attributeTemplateViews.default.refreshButton.addEventListener(

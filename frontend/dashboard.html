@@ -634,7 +634,7 @@
                         <button class="secondary-button" id="refresh-internal-resources" type="button">
                             Refresh internal resources
                         </button>
-                    </div>
+                    </div>t
                     <div class="attribute-table-wrap">
                         <table class="attribute-table">
                             <thead>
@@ -780,17 +780,18 @@
                     </div>
                     <div class="policy-config-actions">
                         <button class="secondary-button" id="validate-policy-config" type="button">Validate</button>
-                        <button class="primary-button" id="generate-policy-rego" type="button">Generate artifacts</button>
+                        <button class="secondary-button" id="generate-policy-rego" type="button">Generate artifacts</button>
+                        <button class="primary-button" id="submit-policy" type="button">Submit policy</button>
                     </div>
                 </div>
                 <p class="policy-config-notice">
-                    Single-tenant prototype. Resource and attribute catalogs use existing APIs. Applying a rule saves
-                    it to the backend; static data and generated artifacts remain local drafts.
+                    Resource and attribute catalogs use existing APIs. Rules remain in a local draft until submitted.
+                    Submitting creates a policy with the selected resource and all rules; generated artifacts remain local.
                 </p>
 
                 <div class="policy-config-meta policy-config-meta-compact">
                     <label class="form-field">
-                        <span>Configuration name</span>
+                        <span>Policy name</span>
                         <input id="policy-config-name" value="Default ABAC Policy" maxlength="128" required>
                     </label>
                 </div>
@@ -985,7 +986,7 @@
                     <span class="policy-step-number">4</span>
                     <div>
                         <h3>Generate and review policy artifacts</h3>
-                        <p>Preview the generated rule file and optional static data file; publishing is not connected.</p>
+                        <p>Preview the generated rule file and optional static data file. Submit the policy and its rules to the backend.</p>
                     </div>
                 </div>
                 <div class="policy-output-grid">
@@ -1014,7 +1015,7 @@
                     </section>
                 </div>
                 <p class="attribute-status" id="policy-config-status" role="status" aria-live="polite">
-                    Applying a rule saves it to the backend. Static data and generated artifacts remain local drafts.
+                    Apply rules to the local draft, then submit the policy to save it with its selected resource.
                 </p>
             </section>
 

@@ -37,17 +37,14 @@ allow if {
     input.action.operation == "AccessCatalog"
 }
 
-
-#### customized rules
 allow if {
     input.action.operation == "SelectFromColumns"
 }
 
-
+#### customized rules
 
 columnMask := {"expression": "CAST(concat('**', substr(customer_name, 3)) AS varchar(100))"} if {
     verified_claims.clearance == 3
-
     column := input.action.resource.column
     column.catalogName == "local_pg"
     column.schemaName == "public"
@@ -55,12 +52,9 @@ columnMask := {"expression": "CAST(concat('**', substr(customer_name, 3)) AS var
     column.columnName == "customer_name"
 }
 
-rowFilters contains {"expression": sprintf("country_code = '%s'", [verified_claims.region])} if {
+rowFilters contains {"expression": "sprintf("country_code = '%s'", [verified_claims.region])"} if {
     table := input.action.resource.table
-
     table.catalogName == "local_pg"
     table.schemaName == "public"
     table.tableName == "customers"
-
 }
-

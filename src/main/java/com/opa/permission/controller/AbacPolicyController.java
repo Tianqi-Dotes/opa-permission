@@ -9,6 +9,7 @@ import com.opa.permission.service.AbacPolicyBindingService;
 import com.opa.permission.service.AbacPolicyRuleService;
 import com.opa.permission.service.AbacPolicyService;
 import com.opa.permission.service.AbacResourceService;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +22,11 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -125,44 +131,95 @@ public class AbacPolicyController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(new ApiError("Policy not found"));
         }
-        if (Boolean.FALSE.equals(policy.getEnabled())) {
-            return ResponseEntity.badRequest()
-                    .body(new ApiError("A disabled policy cannot generate an active config"));
+        try {
+            return ResponseEntity.ok(buildPolicyConfig(policy).response());
+        } catch (PolicyConfigGenerationException exception) {
+            return ResponseEntity.status(exception.status())
+                    .body(new ApiError(exception.getMessage()));
+        }
+    }
+
+    @PostMapping("/generate-config")
+    public ResponseEntity<?> generateAllConfigs() {
+        List<AbacPolicy> policies = abacPolicyService.list(
+                new QueryWrapper<AbacPolicy>().orderByAsc("id"));
+        List<String> internalConfigs = new ArrayList<>();
+        List<String> externalConfigs = new ArrayList<>();
+
+        for (AbacPolicy policy : policies) {
+            try {
+                GeneratedPolicyConfig generated = buildPolicyConfig(policy);
+                (generated.external() ? externalConfigs : internalConfigs)
+                        .add(generated.response().config());
+            } catch (PolicyConfigGenerationException exception) {
+                return ResponseEntity.status(exception.status())
+                        .body(new ApiError(exception.getMessage()));
+            }
         }
 
+        Path outputDirectory = Path.of("policy", "policy");
+        Path internalOutput = outputDirectory.resolve("bucket-policy.rego");
+        Path externalOutput = outputDirectory.resolve("trino-policy.rego");
+        try {
+            String internalTemplate = readTemplate("internal_template.rego");
+            String externalTemplate = readTemplate("trino_template.rego");
+            String internalConfig = appendPolicyConfigs(internalTemplate, internalConfigs);
+            String externalConfig = appendPolicyConfigs(externalTemplate, externalConfigs);
+            Files.createDirectories(outputDirectory);
+            Files.writeString(internalOutput, internalConfig, StandardCharsets.UTF_8);
+            Files.writeString(externalOutput, externalConfig, StandardCharsets.UTF_8);
+        } catch (IOException exception) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiError("Unable to generate policy config files: " + exception.getMessage()));
+        }
+
+        return ResponseEntity.ok(new BulkPolicyConfigResponse(
+                policies.size(),
+                internalConfigs.size(),
+                externalConfigs.size(),
+                internalOutput.toString(),
+                externalOutput.toString()));
+    }
+
+    private GeneratedPolicyConfig buildPolicyConfig(AbacPolicy policy) {
+        if (Boolean.FALSE.equals(policy.getEnabled())) {
+            throw new PolicyConfigGenerationException(
+                    HttpStatus.BAD_REQUEST, "A disabled policy cannot generate an active config");
+        }
         List<AbacPolicyBinding> bindings = abacPolicyBindingService.list(
                 new QueryWrapper<AbacPolicyBinding>()
-                        .eq("policy_id", policyId)
+                        .eq("policy_id", policy.getId())
                         .orderByAsc("priority")
                         .orderByAsc("id"));
         if (bindings.size() != 1
                 || !"resource".equals(PolicyRuleSupport.normalize(bindings.get(0).getScopeType()))
                 || bindings.get(0).getResourceId() == null) {
-            return ResponseEntity.badRequest()
-                    .body(new ApiError("Policy config generation requires exactly one resource binding"));
+            throw new PolicyConfigGenerationException(
+                    HttpStatus.BAD_REQUEST,
+                    "Policy config generation requires exactly one resource binding");
         }
         AbacPolicyBinding binding = bindings.get(0);
         if (Boolean.FALSE.equals(binding.getEnabled())) {
-            return ResponseEntity.badRequest()
-                    .body(new ApiError("A disabled resource binding cannot generate an active config"));
+            throw new PolicyConfigGenerationException(
+                    HttpStatus.BAD_REQUEST, "A disabled resource binding cannot generate an active config");
         }
 
         AbacResource resource = abacResourceService.getById(binding.getResourceId());
         if (resource == null) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(new ApiError("The policy resource was not found"));
+            throw new PolicyConfigGenerationException(
+                    HttpStatus.NOT_FOUND, "The policy resource was not found");
         }
 
         List<AbacPolicyRule> rules = abacPolicyRuleService.list(
                 new QueryWrapper<AbacPolicyRule>()
-                        .eq("policy_id", policyId)
+                        .eq("policy_id", policy.getId())
                         .orderByAsc("id"));
         List<AbacPolicyRule> enabledRules = rules.stream()
                 .filter(rule -> !Boolean.FALSE.equals(rule.getEnabled()))
                 .toList();
         if (enabledRules.isEmpty()) {
-            return ResponseEntity.badRequest()
-                    .body(new ApiError("Policy has no enabled rules to generate"));
+            throw new PolicyConfigGenerationException(
+                    HttpStatus.BAD_REQUEST, "Policy has no enabled rules to generate");
         }
 
         if (Boolean.TRUE.equals(resource.getExternal())) {
@@ -170,61 +227,86 @@ public class AbacPolicyController {
             try {
                 resourcePath = trinoResourcePath(resource);
             } catch (IllegalArgumentException exception) {
-                return ResponseEntity.badRequest().body(new ApiError(exception.getMessage()));
+                throw new PolicyConfigGenerationException(HttpStatus.BAD_REQUEST, exception.getMessage());
             }
             for (AbacPolicyRule rule : enabledRules) {
                 String effect = PolicyRuleSupport.normalize(rule.getEffect());
                 if (!"column_masking".equals(effect) && !"row_filtering".equals(effect)) {
-                    return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
-                            .body(new ApiError(
-                                    "Config generation for external resources does not support effect: "
-                                            + rule.getEffect()));
+                    throw new PolicyConfigGenerationException(
+                            HttpStatus.NOT_IMPLEMENTED,
+                            "Config generation for external resources does not support effect: "
+                                    + rule.getEffect());
                 }
                 if (!StringUtils.hasText(rule.getExpression())) {
-                    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                            .body(new ApiError("An enabled external policy rule has no expression"));
+                    throw new PolicyConfigGenerationException(
+                            HttpStatus.INTERNAL_SERVER_ERROR,
+                            "An enabled external policy rule has no expression");
                 }
                 if ("column_masking".equals(effect) && !StringUtils.hasText(rule.getConditionStr())) {
-                    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                            .body(new ApiError("An enabled column masking rule has no condition"));
+                    throw new PolicyConfigGenerationException(
+                            HttpStatus.INTERNAL_SERVER_ERROR,
+                            "An enabled column masking rule has no condition");
                 }
             }
             String config = enabledRules.stream()
                     .map(rule -> wrapTrinoRule(rule, resourcePath))
                     .collect(Collectors.joining("\n\n"));
-            return ResponseEntity.ok(new PolicyConfigResponse(
-                    policy.getId(),
-                    policy.getPolicyCode(),
-                    resource.getId(),
-                    resource.getResourceType(),
-                    config));
+            return new GeneratedPolicyConfig(
+                    new PolicyConfigResponse(
+                            policy.getId(),
+                            policy.getPolicyCode(),
+                            resource.getId(),
+                            resource.getResourceType(),
+                            config),
+                    true);
         }
         if (!Boolean.FALSE.equals(resource.getExternal())) {
-            return ResponseEntity.badRequest()
-                    .body(new ApiError("The policy resource external flag is not configured"));
+            throw new PolicyConfigGenerationException(
+                    HttpStatus.BAD_REQUEST, "The policy resource external flag is not configured");
         }
 
         for (AbacPolicyRule rule : enabledRules) {
             if (!"permit".equals(PolicyRuleSupport.normalize(rule.getEffect()))) {
-                return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
-                        .body(new ApiError(
-                                "Config generation does not support enabled effect: " + rule.getEffect()));
+                throw new PolicyConfigGenerationException(
+                        HttpStatus.NOT_IMPLEMENTED,
+                        "Config generation does not support enabled effect: " + rule.getEffect());
             }
             if (!StringUtils.hasText(rule.getConditionStr())) {
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                        .body(new ApiError("An enabled policy rule has no condition"));
+                throw new PolicyConfigGenerationException(
+                        HttpStatus.INTERNAL_SERVER_ERROR, "An enabled policy rule has no condition");
             }
         }
 
         String config = enabledRules.stream()
                 .map(rule -> wrapCondition(rule.getConditionStr()))
                 .collect(Collectors.joining("\n\n"));
-        return ResponseEntity.ok(new PolicyConfigResponse(
-                policy.getId(),
-                policy.getPolicyCode(),
-                resource.getId(),
-                resource.getResourceType(),
-                config));
+        return new GeneratedPolicyConfig(
+                new PolicyConfigResponse(
+                        policy.getId(),
+                        policy.getPolicyCode(),
+                        resource.getId(),
+                        resource.getResourceType(),
+                        config),
+                false);
+    }
+
+    private static String readTemplate(String resourceName) throws IOException {
+        try (InputStream inputStream = new ClassPathResource(resourceName).getInputStream()) {
+            return new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+        }
+    }
+
+    private static String appendPolicyConfigs(String template, List<String> configs) {
+        StringBuilder output = new StringBuilder(template);
+        if (!configs.isEmpty()) {
+            if (output.length() > 0 && output.charAt(output.length() - 1) != '\n') {
+                output.append('\n');
+            }
+            output.append('\n')
+                    .append(String.join("\n\n", configs))
+                    .append('\n');
+        }
+        return output.toString();
     }
 
     private List<ResourcePathNode> trinoResourcePath(AbacResource resource) {
@@ -504,7 +586,30 @@ public class AbacPolicyController {
                                        String config) {
     }
 
+    public record BulkPolicyConfigResponse(int policyCount,
+                                           int internalPolicyCount,
+                                           int externalPolicyCount,
+                                           String internalFile,
+                                           String externalFile) {
+    }
+
+    private record GeneratedPolicyConfig(PolicyConfigResponse response, boolean external) {
+    }
+
     private record ResourcePathNode(String type, String name) {
+    }
+
+    private static final class PolicyConfigGenerationException extends RuntimeException {
+        private final HttpStatus status;
+
+        private PolicyConfigGenerationException(HttpStatus status, String message) {
+            super(message);
+            this.status = status;
+        }
+
+        private HttpStatus status() {
+            return status;
+        }
     }
 
     public record PolicyDetailsResponse(PolicySummary policy,

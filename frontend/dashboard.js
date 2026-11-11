@@ -246,6 +246,7 @@ const policySubmissionResult = document.querySelector("#policy-submission-result
 const policySubmissionResultDetails = document.querySelector("#policy-submission-result-details");
 const policySubmissionResultRules = document.querySelector("#policy-submission-result-rules");
 const publishPolicyPanel = document.querySelector("#publish-policy-panel");
+const publishPolicyConfigsButton = document.querySelector("#publish-policy-configs");
 const loadPoliciesButton = document.querySelector("#load-policies");
 const publishPolicyStatus = document.querySelector("#publish-policy-status");
 const publishedPolicyList = document.querySelector("#published-policy-list");
@@ -361,6 +362,7 @@ let policySubmissionRequestId = 0;
 let lastSubmittedPolicyRequest = null;
 let lastSubmittedPolicyCode = null;
 let policyListRequestId = 0;
+let policyConfigPublishInProgress = false;
 let policyDeleteInProgress = false;
 let publishedPolicyPreviewRequestId = 0;
 let activePageKey = null;
@@ -2143,6 +2145,45 @@ async function loadPublishedPolicies() {
     }
 }
 
+async function publishAllPolicyConfigs() {
+    if (policyConfigPublishInProgress) {
+        return;
+    }
+    policyConfigPublishInProgress = true;
+    publishPolicyConfigsButton.disabled = true;
+    publishPolicyConfigsButton.textContent = "Publishing...";
+    publishPolicyStatus.textContent = "Generating and writing policy config files...";
+    try {
+        const response = await fetch(`${apiBaseUrl}/api/abac/policies/generate-config`, {
+            method: "POST",
+            headers: {Authorization: `Bearer ${token}`}
+        });
+        if (!response.ok) {
+            throw new Error(await getApiError(response));
+        }
+        const result = await response.json();
+        if (!result
+                || !Number.isInteger(result.policyCount)
+                || !Number.isInteger(result.internalPolicyCount)
+                || !Number.isInteger(result.externalPolicyCount)
+                || typeof result.internalFile !== "string"
+                || typeof result.externalFile !== "string") {
+            throw new Error("The publish response did not contain valid file details.");
+        }
+        publishPolicyStatus.textContent =
+            `Published ${result.policyCount} polic${result.policyCount === 1 ? "y" : "ies"} `
+            + `(${result.internalPolicyCount} internal, ${result.externalPolicyCount} external). `
+            + `Files: ${result.internalFile}; ${result.externalFile}.`;
+    } catch (error) {
+        const message = error instanceof Error ? error.message : "Unable to publish policy configs.";
+        publishPolicyStatus.textContent = `Could not publish policy configs: ${message}`;
+    } finally {
+        policyConfigPublishInProgress = false;
+        publishPolicyConfigsButton.disabled = false;
+        publishPolicyConfigsButton.textContent = "Publish";
+    }
+}
+
 async function deletePublishedPolicy(policyId, policyName, policyCode, button) {
     if (policyDeleteInProgress || !window.confirm(
         `Delete policy "${policyName}" and all of its resource bindings and rules?`)) {
@@ -3867,6 +3908,7 @@ validatePolicyConfigButton.addEventListener("click", validateCurrentPolicyDraft)
 generatePolicyRegoButton.addEventListener("click", generatePolicyPreview);
 submitPolicyButton.addEventListener("click", submitPolicy);
 loadPoliciesButton.addEventListener("click", loadPublishedPolicies);
+publishPolicyConfigsButton.addEventListener("click", publishAllPolicyConfigs);
 closePublishedPolicyPreviewButton.addEventListener("click", () => {
     publishedPolicyPreviewDialog.close();
 });

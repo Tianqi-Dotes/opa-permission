@@ -19,7 +19,7 @@ verified_claims := claims if {
 }
 
 allow if {
-    input.resource_type == "bucket"
+    input.resource.resource_type == "bucket"
     input.action == "read"
     verified_claims.tenant_id == input.resource.tenant_id
 }

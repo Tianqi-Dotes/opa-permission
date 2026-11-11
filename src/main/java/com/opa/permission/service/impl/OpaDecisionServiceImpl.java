@@ -81,15 +81,11 @@ public class OpaDecisionServiceImpl implements OpaDecisionService {
 
         OpaRequest request = new OpaRequest(new OpaRequest.Input(
                 action.trim(),
-                resourceType.trim(),
-                resourceId,
-                new OpaRequest.Resource(resourceTenantId),
+                new OpaRequest.Resource(resourceType.trim(), resourceId, resourceTenantId),
                 jwt));
         OpaRequest displayRequest = new OpaRequest(new OpaRequest.Input(
                 action.trim(),
-                resourceType.trim(),
-                resourceId,
-                new OpaRequest.Resource(resourceTenantId),
+                new OpaRequest.Resource(resourceType.trim(), resourceId, resourceTenantId),
                 "[REDACTED]"));
 
         Map<String, Object> response;

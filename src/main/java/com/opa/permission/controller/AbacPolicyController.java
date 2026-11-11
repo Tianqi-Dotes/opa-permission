@@ -362,9 +362,13 @@ public class AbacPolicyController {
         String targetType = "column_masking".equals(effect) ? "column" : "table";
         String ruleHead = "column_masking".equals(effect) ? "columnMask :=" : "rowFilters contains";
         StringBuilder config = new StringBuilder(ruleHead)
-                .append(" {\"expression\": \"")
-                .append(rule.getExpression())
-                .append("\"} if {\n");
+                .append(" {\"expression\": ");
+        if ("column_masking".equals(effect)) {
+            config.append('"').append(rule.getExpression()).append('"');
+        } else {
+            config.append(rule.getExpression());
+        }
+        config.append("} if {\n");
         if ("column_masking".equals(effect)) {
             appendIndentedLines(config, rule.getConditionStr());
             config.append("    column := input.action.resource.column\n");

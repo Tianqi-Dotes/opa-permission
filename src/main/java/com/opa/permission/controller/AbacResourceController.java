@@ -25,6 +25,8 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/abac/resources")
 public class AbacResourceController {
+    private static final String PROJECT_DEFAULT_OWNER = "project default";
+
     private final AbacResourceService abacResourceService;
     private final OpaDecisionService opaDecisionService;
 
@@ -49,7 +51,7 @@ public class AbacResourceController {
         }
 
         QueryWrapper<AbacResource> query = new QueryWrapper<AbacResource>()
-                .eq("owner", tenantId.toString());
+                .in("owner", tenantId.toString(), PROJECT_DEFAULT_OWNER);
         if (external != null) {
             query.eq("external", external);
         }

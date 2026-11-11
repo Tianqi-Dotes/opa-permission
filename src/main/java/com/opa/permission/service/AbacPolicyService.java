@@ -9,4 +9,6 @@ import java.util.List;
 
 public interface AbacPolicyService extends IService<AbacPolicy> {
     void createPolicyBundle(AbacPolicy policy, AbacPolicyBinding binding, List<AbacPolicyRule> rules);
+
+    void deletePolicyBundle(Long policyId);
 }

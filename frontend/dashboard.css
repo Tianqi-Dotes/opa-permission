@@ -807,6 +807,24 @@ button {
     gap: 12px;
 }
 
+.published-policy-actions {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 8px;
+}
+
+.published-policy-delete {
+    color: #b24646;
+    border-color: #f0d7d7;
+    background: #fff8f8;
+}
+
+.published-policy-delete:hover:not(:disabled) {
+    border-color: #e7bcbc;
+    background: #fff0f0;
+}
+
 .published-policy-card-header h3,
 .published-policy-section h4 {
     margin: 0;

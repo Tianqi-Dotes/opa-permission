@@ -1,5 +1,6 @@
 package com.opa.permission.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
 import com.opa.permission.mapper.AbacPolicyMapper;
 import com.opa.permission.model.AbacPolicy;
@@ -40,6 +41,16 @@ public class AbacPolicyServiceImpl extends ServiceImpl<AbacPolicyMapper, AbacPol
             if (!ruleService.save(rule)) {
                 throw new IllegalStateException("A policy rule was not created");
             }
+        }
+    }
+
+    @Override
+    @Transactional
+    public void deletePolicyBundle(Long policyId) {
+        ruleService.remove(new QueryWrapper<AbacPolicyRule>().eq("policy_id", policyId));
+        bindingService.remove(new QueryWrapper<AbacPolicyBinding>().eq("policy_id", policyId));
+        if (!removeById(policyId)) {
+            throw new IllegalStateException("Policy was not deleted");
         }
     }
 }

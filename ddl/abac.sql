@@ -31,6 +31,34 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_resources_child_resource_code
 CREATE INDEX IF NOT EXISTS idx_resources_parent_resource_id
     ON test.resources (parent_resource_id);
 
+-- Project-wide scopes available to policy configuration.
+INSERT INTO test.resources (
+    parent_resource_id,
+    external,
+    resource_code,
+    resource_type,
+    resource_name,
+    owner,
+    status,
+    create_time,
+    update_time
+)
+VALUES
+    (NULL, FALSE, 'all_buckets', 'bucket', 'all_buckets', 'project default', 'active',
+     (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT,
+     (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
+    (NULL, FALSE, 'all_trino', 'trino', 'all_trino', 'project default', 'active',
+     (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT,
+     (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT)
+ON CONFLICT (resource_code) WHERE parent_resource_id IS NULL
+DO UPDATE SET
+    external = EXCLUDED.external,
+    resource_type = EXCLUDED.resource_type,
+    resource_name = EXCLUDED.resource_name,
+    owner = EXCLUDED.owner,
+    status = EXCLUDED.status,
+    update_time = EXCLUDED.update_time;
+
 -- Stores Trino JDBC connection metadata; the caller's short-lived token is supplied at runtime.
 CREATE TABLE IF NOT EXISTS test.trino_connections (
     id              BIGSERIAL PRIMARY KEY,

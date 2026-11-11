@@ -360,6 +360,7 @@ let policySubmissionInProgress = false;
 let lastSubmittedPolicyRequest = null;
 let lastSubmittedPolicyCode = null;
 let policyListRequestId = 0;
+let policyDeleteInProgress = false;
 let bucketCreationInProgress = false;
 let datasourceCreationInProgress = false;
 let pipelineBucketRequestId = 0;
@@ -1786,11 +1787,23 @@ function renderPublishedPolicies(policies) {
         const header = document.createElement("div");
         header.className = "published-policy-card-header";
         const title = document.createElement("h3");
-        title.textContent = policy.policyName || policy.policyCode || `Policy ${policy.id}`;
+        const policyName = policy.policyName || policy.policyCode || `Policy ${policy.id}`;
+        title.textContent = policyName;
         const state = document.createElement("span");
         state.className = `published-policy-state${policy.enabled === false ? " is-disabled" : ""}`;
         state.textContent = policy.enabled === false ? "Disabled" : "Enabled";
-        header.append(title, state);
+        const actions = document.createElement("div");
+        actions.className = "published-policy-actions";
+        const deleteButton = document.createElement("button");
+        deleteButton.className = "secondary-button published-policy-delete";
+        deleteButton.type = "button";
+        deleteButton.textContent = "Delete";
+        deleteButton.dataset.policyId = String(policy.id);
+        deleteButton.dataset.policyName = policyName;
+        deleteButton.dataset.policyCode = policy.policyCode || "";
+        deleteButton.setAttribute("aria-label", `Delete policy ${policy.policyCode || policyName}`);
+        actions.append(state, deleteButton);
+        header.append(title, actions);
         card.append(header);
 
         const metadata = document.createElement("p");
@@ -1885,6 +1898,9 @@ function renderPublishedPolicies(policies) {
 }
 
 async function loadPublishedPolicies() {
+    if (policyDeleteInProgress) {
+        return;
+    }
     const requestId = ++policyListRequestId;
     loadPoliciesButton.disabled = true;
     publishPolicyStatus.textContent = "Loading saved policies...";
@@ -1917,6 +1933,53 @@ async function loadPublishedPolicies() {
         if (requestId === policyListRequestId) {
             loadPoliciesButton.disabled = false;
         }
+    }
+}
+
+async function deletePublishedPolicy(policyId, policyName, policyCode, button) {
+    if (policyDeleteInProgress || !window.confirm(
+        `Delete policy "${policyName}" and all of its resource bindings and rules?`)) {
+        return;
+    }
+
+    policyDeleteInProgress = true;
+    policyListRequestId += 1;
+    loadPoliciesButton.disabled = true;
+    const deleteButtons = Array.from(publishedPolicyList.querySelectorAll(".published-policy-delete"));
+    deleteButtons.forEach((deleteButton) => {
+        deleteButton.disabled = true;
+    });
+    button.textContent = "Deleting...";
+    publishPolicyStatus.textContent = `Deleting policy ${policyCode || policyName}...`;
+    try {
+        const response = await fetch(
+            `${apiBaseUrl}/api/abac/policies/${encodeURIComponent(policyId)}`,
+            {
+                method: "DELETE",
+                headers: {Authorization: `Bearer ${token}`}
+            }
+        );
+        if (!response.ok) {
+            throw new Error(await getApiError(response));
+        }
+        button.closest(".published-policy-card")?.remove();
+        if (!publishedPolicyList.querySelector(".published-policy-card")) {
+            renderPublishedPolicies([]);
+        }
+        publishPolicyStatus.textContent =
+            `Policy ${policyCode || policyName} and its resource bindings and rules were deleted.`;
+    } catch (error) {
+        const message = error instanceof Error ? error.message : "Unable to delete the policy.";
+        publishPolicyStatus.textContent = `Could not delete policy ${policyCode || policyName}: ${message}`;
+    } finally {
+        deleteButtons.forEach((deleteButton) => {
+            if (deleteButton.isConnected) {
+                deleteButton.disabled = false;
+                deleteButton.textContent = "Delete";
+            }
+        });
+        loadPoliciesButton.disabled = false;
+        policyDeleteInProgress = false;
     }
 }
 
@@ -3597,6 +3660,17 @@ validatePolicyConfigButton.addEventListener("click", validateCurrentPolicyDraft)
 generatePolicyRegoButton.addEventListener("click", generatePolicyPreview);
 submitPolicyButton.addEventListener("click", submitPolicy);
 loadPoliciesButton.addEventListener("click", loadPublishedPolicies);
+publishedPolicyList.addEventListener("click", (event) => {
+    const button = event.target.closest(".published-policy-delete[data-policy-id]");
+    if (button) {
+        deletePublishedPolicy(
+            button.dataset.policyId,
+            button.dataset.policyName,
+            button.dataset.policyCode,
+            button
+        );
+    }
+});
 defaultTemplateTab.addEventListener("click", () => activateAttributeTemplateTab(defaultTemplateTab));
 tenantTemplateTab.addEventListener("click", () => activateAttributeTemplateTab(tenantTemplateTab));
 attributeTemplateViews.default.refreshButton.addEventListener(

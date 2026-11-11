@@ -28,10 +28,6 @@
                         <span class="nav-icon" aria-hidden="true">TP</span>
                         <span>Test Permissions</span>
                     </button>
-                    <button class="nav-item" type="button" data-page="assign-policy">
-                        <span class="nav-icon" aria-hidden="true">AP</span>
-                        <span>Assign Policy</span>
-                    </button>
                 </div>
             </section>
 
@@ -58,9 +54,9 @@
                         <span class="nav-icon" aria-hidden="true">PC</span>
                         <span>Policy Config</span>
                     </button>
-                    <button class="nav-item" type="button" data-page="playground">
-                        <span class="nav-icon" aria-hidden="true">PG</span>
-                        <span>Playground</span>
+                    <button class="nav-item" type="button" data-page="sandbox">
+                        <span class="nav-icon" aria-hidden="true">SB</span>
+                        <span>Sandbox</span>
                     </button>
                     <button class="nav-item" type="button" data-page="publish-policy">
                         <span class="nav-icon" aria-hidden="true">PU</span>
@@ -81,12 +77,12 @@
                         <span>Create Datasource</span>
                     </button>
                     <button class="nav-item" type="button" data-page="create-bucket">
-                        <span class="nav-icon" aria-hidden="true">CB</span>
-                        <span>Create Bucket</span>
+                        <span class="nav-icon" aria-hidden="true">BP</span>
+                        <span>Bucket Provisioning</span>
                     </button>
                     <button class="nav-item" type="button" data-page="create-pipeline">
-                        <span class="nav-icon" aria-hidden="true">CP</span>
-                        <span>Create Pipeline</span>
+                        <span class="nav-icon" aria-hidden="true">PP</span>
+                        <span>Pipeline Provisioning</span>
                     </button>
                 </div>
             </section>
@@ -493,7 +489,7 @@
                      aria-labelledby="create-bucket-title">
                 <div class="assign-role-header">
                     <div>
-                        <h2 id="create-bucket-title">Register a bucket resource</h2>
+                        <h2 id="create-bucket-title">Provision a bucket resource</h2>
                         <p>The resource will be associated with the tenant in your current session.</p>
                     </div>
                 </div>
@@ -504,11 +500,11 @@
                                autocomplete="off" required>
                     </label>
                     <button class="primary-button" id="create-bucket-submit" type="submit">
-                        Create bucket
+                        Provision bucket
                     </button>
                 </form>
                 <p class="assign-role-status" id="create-bucket-status" role="status" aria-live="polite">
-                    Enter a bucket name to register it as an ABAC resource.
+                    Enter a bucket name to provision it as an ABAC resource.
                 </p>
             </section>
 
@@ -552,7 +548,7 @@
                      aria-labelledby="create-pipeline-title">
                 <div class="assign-role-header">
                     <div>
-                        <h2 id="create-pipeline-title">Create a pipeline</h2>
+                        <h2 id="create-pipeline-title">Provision a pipeline</h2>
                         <p>Select source and target buckets. Both must pass OPA authorization.</p>
                     </div>
                 </div>
@@ -572,7 +568,7 @@
                         </label>
                     </div>
                     <button class="primary-button" id="create-pipeline-submit" type="submit" disabled>
-                        Create Pipeline
+                        Provision Pipeline
                     </button>
                 </form>
                 <p class="assign-role-status" id="create-pipeline-status" role="status" aria-live="polite">
@@ -789,6 +785,19 @@
                     Submitting creates a policy with the selected resource and all rules; generated artifacts remain local.
                 </p>
 
+                <section class="policy-submission-result" id="policy-submission-result" hidden
+                         aria-labelledby="policy-submission-result-title" aria-live="polite">
+                    <div class="policy-submission-result-heading">
+                        <h3 id="policy-submission-result-title">Policy submitted successfully</h3>
+                        <span>Created</span>
+                    </div>
+                    <div class="policy-submission-result-details" id="policy-submission-result-details"></div>
+                    <div class="policy-submission-result-rules">
+                        <h4>Created rules</h4>
+                        <ul id="policy-submission-result-rules"></ul>
+                    </div>
+                </section>
+
                 <div class="policy-config-meta policy-config-meta-compact">
                     <label class="form-field">
                         <span>Policy name</span>
@@ -947,7 +956,7 @@
                             <div class="policy-condition-header">
                                 <div>
                                     <h4>Conditions</h4>
-                                    <p>Choose a subject, resource, or action attribute on the left; use a fixed value or resource attribute on the right.</p>
+                                    <p>Choose a subject, resource, or action attribute on the left; use a fixed value or resource attribute on the right. Row-filtering rules may omit conditions to apply within the selected resource scope.</p>
                                 </div>
                                 <button class="secondary-button" id="add-policy-condition" type="button">
                                     Add condition
@@ -1033,6 +1042,21 @@
                 </p>
                 <div class="published-policy-list" id="published-policy-list"></div>
             </section>
+
+            <dialog class="published-policy-preview-dialog" id="published-policy-preview-dialog"
+                    aria-labelledby="published-policy-preview-title">
+                <div class="published-policy-preview-content">
+                    <div class="published-policy-preview-header">
+                        <h2 id="published-policy-preview-title">Policy preview</h2>
+                        <button class="secondary-button" id="close-published-policy-preview" type="button">
+                            Close
+                        </button>
+                    </div>
+                    <p class="published-policy-preview-status" id="published-policy-preview-status"
+                       role="status" aria-live="polite"></p>
+                    <pre class="published-policy-preview-config" id="published-policy-preview-config"></pre>
+                </div>
+            </dialog>
 
             <div class="info-row" id="info-row" hidden>
                 <span class="info-icon" aria-hidden="true">i</span>

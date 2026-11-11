@@ -430,6 +430,7 @@ button {
 #resource-attribute-resource-id-field[hidden],
 .trino-resource-picker[hidden],
 .policy-config-panel[hidden],
+.policy-submission-result[hidden],
 .policy-rule-form[hidden],
 .policy-empty-editor[hidden],
 .policy-row-filter-settings[hidden],
@@ -814,6 +815,59 @@ button {
     gap: 8px;
 }
 
+.published-policy-preview-dialog {
+    width: min(820px, calc(100vw - 32px));
+    max-height: min(82vh, 760px);
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid #dfe5ef;
+    border-radius: 12px;
+    color: #34445d;
+    background: #fff;
+    box-shadow: 0 20px 60px rgba(27, 40, 62, .2);
+}
+
+.published-policy-preview-dialog::backdrop {
+    background: rgba(25, 37, 57, .42);
+}
+
+.published-policy-preview-content {
+    padding: 20px;
+}
+
+.published-policy-preview-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.published-policy-preview-header h2 {
+    margin: 0;
+    color: #27344a;
+    font-size: 15px;
+}
+
+.published-policy-preview-status {
+    margin: 0 0 9px;
+    color: #78869d;
+    font-size: 10px;
+}
+
+.published-policy-preview-config {
+    max-height: calc(82vh - 90px);
+    margin: 0;
+    padding: 14px;
+    overflow: auto;
+    border-radius: 8px;
+    color: #4a5870;
+    background: #f5f7fb;
+    font: 11px/1.6 Consolas, "Courier New", monospace;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
 .published-policy-delete {
     color: #b24646;
     border-color: #f0d7d7;
@@ -848,8 +902,7 @@ button {
 }
 
 .published-policy-meta,
-.published-policy-description,
-.published-policy-expression {
+.published-policy-description {
     margin: 7px 0 0;
     color: #78869d;
     font-size: 10px;
@@ -913,6 +966,35 @@ button {
     color: #4a5870;
     background: #f5f7fb;
     font: 10px/1.6 Consolas, "Courier New", monospace;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.published-policy-expression {
+    margin-top: 12px;
+    padding: 11px 12px;
+    border: 1px solid #c8dcf5;
+    border-left: 4px solid #3478c5;
+    border-radius: 7px;
+    background: #f0f6ff;
+}
+
+.published-policy-expression-label {
+    display: block;
+    margin-bottom: 6px;
+    color: #245b98;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+.published-policy-expression-value {
+    max-height: 180px;
+    margin: 0;
+    overflow: auto;
+    color: #1d3554;
+    font: 12px/1.6 Consolas, "Courier New", monospace;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
 }
@@ -1155,6 +1237,97 @@ button {
     background: #fffaf0;
     font-size: 10px;
     line-height: 1.6;
+}
+
+.policy-submission-result {
+    margin: 18px 0;
+    padding: 16px;
+    border: 1px solid #cfe8d8;
+    border-radius: 9px;
+    background: #f5fbf7;
+}
+
+.policy-submission-result-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.policy-submission-result-heading h3,
+.policy-submission-result-rules h4 {
+    margin: 0;
+    color: #285d43;
+    font-size: 13px;
+}
+
+.policy-submission-result-heading span {
+    padding: 4px 8px;
+    border-radius: 999px;
+    color: #23734d;
+    background: #e2f4e9;
+    font-size: 9px;
+    font-weight: 700;
+}
+
+.policy-submission-result-details {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 9px;
+    margin-top: 13px;
+}
+
+.policy-submission-result-detail {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 5px;
+    padding: 9px 10px;
+    border: 1px solid #e3f0e7;
+    border-radius: 7px;
+    background: #fff;
+}
+
+.policy-submission-result-detail span {
+    color: #788a7e;
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.policy-submission-result-detail strong,
+.policy-submission-result-rules li span {
+    color: #34445d;
+    font-size: 10px;
+    overflow-wrap: anywhere;
+}
+
+.policy-submission-result-rules {
+    margin-top: 14px;
+}
+
+.policy-submission-result-rules ul {
+    display: grid;
+    gap: 6px;
+    margin: 8px 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.policy-submission-result-rules li {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 5px 12px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    background: #fff;
+}
+
+.policy-submission-result-rules li strong {
+    color: #34445d;
+    font-size: 10px;
+    overflow-wrap: anywhere;
 }
 
 .policy-config-meta {
@@ -1890,6 +2063,10 @@ button {
     }
 
     .policy-config-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .policy-submission-result-details {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 

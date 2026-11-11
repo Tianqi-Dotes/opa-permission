@@ -65,7 +65,8 @@ WITH missing_role_permissions AS (
                 'Create ABAC Policy Rule',
                 'Update ABAC Policy Rule',
                 'Delete ABAC Policy Rule',
-                'Check ABAC Resource Decision'
+                'Check ABAC Resource Decision',
+                'Generate ABAC Policy Config'
             ))
        OR (r.role_name = 'ANALYST' AND p.permission_name = 'Query Trino')
        OR (r.role_name = 'DEVELOPER'

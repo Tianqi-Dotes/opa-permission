@@ -23,6 +23,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -35,6 +37,8 @@ public class AbacPolicyController {
     private static final long DEFAULT_CONFIG_ID = 1L;
     private static final Set<String> COMBINING_ALGORITHMS =
             Set.of("deny_overrides", "permit_overrides", "first_applicable");
+    private static final Set<String> TRINO_RESOURCE_TYPES =
+            Set.of("trino_catalog", "trino_schema", "trino_table", "trino_field");
 
     private final AbacPolicyService abacPolicyService;
     private final AbacPolicyBindingService abacPolicyBindingService;
@@ -108,6 +112,233 @@ public class AbacPolicyController {
                                 .toList()))
                 .toList();
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{policyId}/config")
+    public ResponseEntity<?> generateConfig(@PathVariable("policyId") Long policyId) {
+        if (policyId == null || policyId <= 0) {
+            return ResponseEntity.badRequest().body(new ApiError("policyId must be positive"));
+        }
+
+        AbacPolicy policy = abacPolicyService.getById(policyId);
+        if (policy == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ApiError("Policy not found"));
+        }
+        if (Boolean.FALSE.equals(policy.getEnabled())) {
+            return ResponseEntity.badRequest()
+                    .body(new ApiError("A disabled policy cannot generate an active config"));
+        }
+
+        List<AbacPolicyBinding> bindings = abacPolicyBindingService.list(
+                new QueryWrapper<AbacPolicyBinding>()
+                        .eq("policy_id", policyId)
+                        .orderByAsc("priority")
+                        .orderByAsc("id"));
+        if (bindings.size() != 1
+                || !"resource".equals(PolicyRuleSupport.normalize(bindings.get(0).getScopeType()))
+                || bindings.get(0).getResourceId() == null) {
+            return ResponseEntity.badRequest()
+                    .body(new ApiError("Policy config generation requires exactly one resource binding"));
+        }
+        AbacPolicyBinding binding = bindings.get(0);
+        if (Boolean.FALSE.equals(binding.getEnabled())) {
+            return ResponseEntity.badRequest()
+                    .body(new ApiError("A disabled resource binding cannot generate an active config"));
+        }
+
+        AbacResource resource = abacResourceService.getById(binding.getResourceId());
+        if (resource == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ApiError("The policy resource was not found"));
+        }
+
+        List<AbacPolicyRule> rules = abacPolicyRuleService.list(
+                new QueryWrapper<AbacPolicyRule>()
+                        .eq("policy_id", policyId)
+                        .orderByAsc("id"));
+        List<AbacPolicyRule> enabledRules = rules.stream()
+                .filter(rule -> !Boolean.FALSE.equals(rule.getEnabled()))
+                .toList();
+        if (enabledRules.isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(new ApiError("Policy has no enabled rules to generate"));
+        }
+
+        if (Boolean.TRUE.equals(resource.getExternal())) {
+            List<ResourcePathNode> resourcePath;
+            try {
+                resourcePath = trinoResourcePath(resource);
+            } catch (IllegalArgumentException exception) {
+                return ResponseEntity.badRequest().body(new ApiError(exception.getMessage()));
+            }
+            for (AbacPolicyRule rule : enabledRules) {
+                String effect = PolicyRuleSupport.normalize(rule.getEffect());
+                if (!"column_masking".equals(effect) && !"row_filtering".equals(effect)) {
+                    return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
+                            .body(new ApiError(
+                                    "Config generation for external resources does not support effect: "
+                                            + rule.getEffect()));
+                }
+                if (!StringUtils.hasText(rule.getExpression())) {
+                    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                            .body(new ApiError("An enabled external policy rule has no expression"));
+                }
+                if ("column_masking".equals(effect) && !StringUtils.hasText(rule.getConditionStr())) {
+                    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                            .body(new ApiError("An enabled column masking rule has no condition"));
+                }
+            }
+            String config = enabledRules.stream()
+                    .map(rule -> wrapTrinoRule(rule, resourcePath))
+                    .collect(Collectors.joining("\n\n"));
+            return ResponseEntity.ok(new PolicyConfigResponse(
+                    policy.getId(),
+                    policy.getPolicyCode(),
+                    resource.getId(),
+                    resource.getResourceType(),
+                    config));
+        }
+        if (!Boolean.FALSE.equals(resource.getExternal())) {
+            return ResponseEntity.badRequest()
+                    .body(new ApiError("The policy resource external flag is not configured"));
+        }
+
+        for (AbacPolicyRule rule : enabledRules) {
+            if (!"permit".equals(PolicyRuleSupport.normalize(rule.getEffect()))) {
+                return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
+                        .body(new ApiError(
+                                "Config generation does not support enabled effect: " + rule.getEffect()));
+            }
+            if (!StringUtils.hasText(rule.getConditionStr())) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(new ApiError("An enabled policy rule has no condition"));
+            }
+        }
+
+        String config = enabledRules.stream()
+                .map(rule -> wrapCondition(rule.getConditionStr()))
+                .collect(Collectors.joining("\n\n"));
+        return ResponseEntity.ok(new PolicyConfigResponse(
+                policy.getId(),
+                policy.getPolicyCode(),
+                resource.getId(),
+                resource.getResourceType(),
+                config));
+    }
+
+    private List<ResourcePathNode> trinoResourcePath(AbacResource resource) {
+        List<ResourcePathNode> path = new ArrayList<>();
+        Set<Long> visited = new HashSet<>();
+        AbacResource current = resource;
+        while (current != null) {
+            if (current.getId() == null || !visited.add(current.getId())) {
+                throw new IllegalArgumentException("The Trino resource hierarchy is invalid");
+            }
+            String resourceType = PolicyRuleSupport.normalize(current.getResourceType());
+            if ("trino_connection".equals(resourceType)) {
+                if (current.getParentResourceId() != null
+                        || !Boolean.TRUE.equals(current.getExternal())
+                        || !StringUtils.hasText(current.getResourceName())) {
+                    throw new IllegalArgumentException("The Trino resource hierarchy is invalid");
+                }
+                Collections.reverse(path);
+                validateTrinoResourcePath(path);
+                return path;
+            }
+            if (!TRINO_RESOURCE_TYPES.contains(resourceType)
+                    || !Boolean.TRUE.equals(current.getExternal())
+                    || !StringUtils.hasText(current.getResourceName())
+                    || current.getParentResourceId() == null) {
+                throw new IllegalArgumentException("The Trino resource hierarchy is invalid");
+            }
+            path.add(new ResourcePathNode(resourceType, current.getResourceName()));
+            current = abacResourceService.getById(current.getParentResourceId());
+        }
+        throw new IllegalArgumentException("The Trino resource hierarchy is invalid");
+    }
+
+    private static void validateTrinoResourcePath(List<ResourcePathNode> path) {
+        String parentType = "trino_connection";
+        for (ResourcePathNode node : path) {
+            boolean valid = switch (node.type()) {
+                case "trino_catalog" -> "trino_connection".equals(parentType);
+                case "trino_schema" -> "trino_catalog".equals(parentType);
+                case "trino_table" -> "trino_schema".equals(parentType);
+                case "trino_field" -> "trino_table".equals(parentType);
+                default -> false;
+            };
+            if (!valid) {
+                throw new IllegalArgumentException("The Trino resource hierarchy is invalid");
+            }
+            parentType = node.type();
+        }
+    }
+
+    private static String wrapTrinoRule(AbacPolicyRule rule, List<ResourcePathNode> resourcePath) {
+        String effect = PolicyRuleSupport.normalize(rule.getEffect());
+        String targetType = "column_masking".equals(effect) ? "column" : "table";
+        String ruleHead = "column_masking".equals(effect) ? "columnMask :=" : "rowFilters contains";
+        StringBuilder config = new StringBuilder(ruleHead)
+                .append(" {\"expression\": \"")
+                .append(rule.getExpression())
+                .append("\"} if {\n");
+        if ("column_masking".equals(effect)) {
+            appendIndentedLines(config, rule.getConditionStr());
+            config.append("    column := input.action.resource.column\n");
+        } else {
+            config.append("    table := input.action.resource.table\n");
+        }
+        for (ResourcePathNode node : resourcePath) {
+            String attribute = switch (node.type()) {
+                case "trino_catalog" -> "catalogName";
+                case "trino_schema" -> "schemaName";
+                case "trino_table" -> "tableName";
+                case "trino_field" -> "columnName";
+                default -> null;
+            };
+            if (attribute != null && (!"trino_field".equals(node.type())
+                    || "column_masking".equals(effect))) {
+                config.append("    ")
+                        .append(targetType)
+                        .append('.')
+                        .append(attribute)
+                        .append(" == ")
+                        .append(regoString(node.name()))
+                        .append('\n');
+            }
+        }
+        return config.append('}').toString();
+    }
+
+    private static void appendIndentedLines(StringBuilder output, String condition) {
+        condition.strip().lines()
+                .map(line -> "    " + line.stripTrailing())
+                .forEach(line -> output.append(line).append('\n'));
+    }
+
+    private static String regoString(String value) {
+        StringBuilder quoted = new StringBuilder("\"");
+        for (int index = 0; index < value.length(); index++) {
+            char character = value.charAt(index);
+            switch (character) {
+                case '"' -> quoted.append("\\\"");
+                case '\\' -> quoted.append("\\\\");
+                case '\b' -> quoted.append("\\b");
+                case '\f' -> quoted.append("\\f");
+                case '\n' -> quoted.append("\\n");
+                case '\r' -> quoted.append("\\r");
+                case '\t' -> quoted.append("\\t");
+                default -> {
+                    if (character < 0x20) {
+                        quoted.append(String.format("\\u%04x", (int) character));
+                    } else {
+                        quoted.append(character);
+                    }
+                }
+            }
+        }
+        return quoted.append('"').toString();
     }
 
     @DeleteMapping("/{policyId}")
@@ -238,6 +469,13 @@ public class AbacPolicyController {
         }
     }
 
+    private static String wrapCondition(String condition) {
+        String indentedCondition = condition.strip().lines()
+                .map(line -> "    " + line.stripTrailing())
+                .collect(Collectors.joining("\n"));
+        return "allow if {\n" + indentedCondition + "\n}";
+    }
+
     public record CreatePolicyRequest(String policyName,
                                       String combiningAlgorithm,
                                       Boolean enabled,
@@ -257,6 +495,16 @@ public class AbacPolicyController {
     public record PolicySubmissionResponse(AbacPolicy policy,
                                            AbacPolicyBinding binding,
                                            List<AbacPolicyRule> rules) {
+    }
+
+    public record PolicyConfigResponse(Long policyId,
+                                       String policyCode,
+                                       Long resourceId,
+                                       String resourceType,
+                                       String config) {
+    }
+
+    private record ResourcePathNode(String type, String name) {
     }
 
     public record PolicyDetailsResponse(PolicySummary policy,

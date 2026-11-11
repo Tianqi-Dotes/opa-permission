@@ -15,14 +15,6 @@ const pages = {
         featureDescription: "Test a user's access against the active role and permission rules.",
         symbol: "TP"
     },
-    "assign-policy": {
-        section: "RBAC",
-        title: "Assign Policy",
-        description: "Manage policies and associate them with the appropriate identities.",
-        featureTitle: "Policy assignment",
-        featureDescription: "Policy assignment tools will be available here.",
-        symbol: "AP"
-    },
     "attribute-dictionary": {
         section: "ABAC",
         title: "Attribute Dictionary",
@@ -63,13 +55,13 @@ const pages = {
         featureDescription: "Build resource-scoped policies from dictionary attributes and preview generated artifacts.",
         symbol: "PC"
     },
-    "playground": {
+    "sandbox": {
         section: "ABAC",
-        title: "Playground",
+        title: "Sandbox",
         description: "Evaluate sample requests against the current ABAC policy.",
-        featureTitle: "Policy playground",
+        featureTitle: "Policy sandbox",
         featureDescription: "Provide subject, resource, action, and environment input to inspect a policy decision.",
-        symbol: "PG"
+        symbol: "SB"
     },
     "publish-policy": {
         section: "ABAC",
@@ -97,19 +89,19 @@ const pages = {
     },
     "create-bucket": {
         section: "Workspace",
-        title: "Create Bucket",
-        description: "Register a bucket as an ABAC-protected resource.",
-        featureTitle: "Create bucket",
-        featureDescription: "Register a bucket resource for the current tenant.",
-        symbol: "CB"
+        title: "Bucket Provisioning",
+        description: "Provision a bucket as an ABAC-protected resource.",
+        featureTitle: "Bucket provisioning",
+        featureDescription: "Provision a bucket resource for the current tenant.",
+        symbol: "BP"
     },
     "create-pipeline": {
         section: "Workspace",
-        title: "Create Pipeline",
-        description: "Create and manage data pipelines in your workspace.",
-        featureTitle: "Pipeline creation",
-        featureDescription: "Pipeline configuration tools will be available here.",
-        symbol: "CP"
+        title: "Pipeline Provisioning",
+        description: "Provision and manage data pipelines in your workspace.",
+        featureTitle: "Pipeline provisioning",
+        featureDescription: "Configure and provision data pipelines in your workspace.",
+        symbol: "PP"
     }
 };
 
@@ -250,10 +242,18 @@ const policyValidationList = document.querySelector("#policy-validation-list");
 const policyRegoPreview = document.querySelector("#policy-rego-preview");
 const policyDataPreview = document.querySelector("#policy-data-preview");
 const policyConfigStatus = document.querySelector("#policy-config-status");
+const policySubmissionResult = document.querySelector("#policy-submission-result");
+const policySubmissionResultDetails = document.querySelector("#policy-submission-result-details");
+const policySubmissionResultRules = document.querySelector("#policy-submission-result-rules");
 const publishPolicyPanel = document.querySelector("#publish-policy-panel");
 const loadPoliciesButton = document.querySelector("#load-policies");
 const publishPolicyStatus = document.querySelector("#publish-policy-status");
 const publishedPolicyList = document.querySelector("#published-policy-list");
+const publishedPolicyPreviewDialog = document.querySelector("#published-policy-preview-dialog");
+const publishedPolicyPreviewTitle = document.querySelector("#published-policy-preview-title");
+const publishedPolicyPreviewStatus = document.querySelector("#published-policy-preview-status");
+const publishedPolicyPreviewConfig = document.querySelector("#published-policy-preview-config");
+const closePublishedPolicyPreviewButton = document.querySelector("#close-published-policy-preview");
 const resourceAttributesPanel = document.querySelector("#resource-attributes-panel");
 const internalResourceTab = document.querySelector("#internal-resource-tab");
 const externalResourceTab = document.querySelector("#external-resource-tab");
@@ -357,10 +357,13 @@ let policyGenerated = false;
 let policyAttributeRequestId = 0;
 let policyResourceRequestId = 0;
 let policySubmissionInProgress = false;
+let policySubmissionRequestId = 0;
 let lastSubmittedPolicyRequest = null;
 let lastSubmittedPolicyCode = null;
 let policyListRequestId = 0;
 let policyDeleteInProgress = false;
+let publishedPolicyPreviewRequestId = 0;
+let activePageKey = null;
 let bucketCreationInProgress = false;
 let datasourceCreationInProgress = false;
 let pipelineBucketRequestId = 0;
@@ -430,6 +433,10 @@ function showPage(pageKey) {
     if (!page) {
         return;
     }
+    if (pageKey === "policy-config" && activePageKey !== pageKey) {
+        resetPolicyConfiguration();
+    }
+    activePageKey = pageKey;
 
     pageTitle.textContent = page.title;
     pageKicker.textContent = page.section;
@@ -544,7 +551,7 @@ async function createBucket(event) {
 
     bucketCreationInProgress = true;
     createBucketSubmit.disabled = true;
-    createBucketStatus.textContent = "Creating bucket resource...";
+    createBucketStatus.textContent = "Provisioning bucket resource...";
     try {
         const response = await fetch(`${apiBaseUrl}/api/abac/resources/buckets`, {
             method: "POST",
@@ -560,10 +567,10 @@ async function createBucket(event) {
 
         const resource = await response.json();
         createBucketStatus.textContent =
-            `Bucket "${bucketName}" was registered with resource ID ${resource.id} and code ${resource.resourceCode}.`;
+            `Bucket "${bucketName}" was provisioned with resource ID ${resource.id} and code ${resource.resourceCode}.`;
         createBucketForm.reset();
     } catch (error) {
-        createBucketStatus.textContent = error.message || "Unable to create the bucket resource.";
+        createBucketStatus.textContent = error.message || "Unable to provision the bucket resource.";
     } finally {
         bucketCreationInProgress = false;
         createBucketSubmit.disabled = false;
@@ -648,7 +655,7 @@ async function loadPipelineBuckets() {
         createPipelineSubmit.disabled = pipelineBuckets.length === 0;
         createPipelineStatus.textContent = pipelineBuckets.length
             ? "Select a source and target bucket."
-            : "No active buckets found. Create a bucket before creating a pipeline.";
+            : "No active buckets found. Provision a bucket before provisioning a pipeline.";
     } catch (error) {
         if (requestId !== pipelineBucketRequestId) {
             return;
@@ -1604,6 +1611,11 @@ function applyPolicyRuleChanges() {
     if (!rule) {
         return true;
     }
+    if (policyRuleEffect.value === "row_filtering") {
+        editingPolicyConditions = editingPolicyConditions.filter((condition) =>
+            condition.attribute || condition.valueAttribute || condition.valueText.trim());
+        renderPolicyConditionRows();
+    }
     if (!policyRuleForm.reportValidity()) {
         return false;
     }
@@ -1697,6 +1709,100 @@ function deleteSelectedPolicyRule() {
     policyConfigStatus.textContent = "Rule deleted from the local draft.";
 }
 
+function resetPolicyConfiguration() {
+    policySubmissionRequestId += 1;
+    lastSubmittedPolicyRequest = null;
+    lastSubmittedPolicyCode = null;
+    policyConfigName.value = "Default ABAC Policy";
+    policyResourceSelect.value = "";
+    policyRules = [];
+    selectedPolicyRuleId = null;
+    nextPolicyRuleId = 1;
+    editingPolicyConditions = [];
+    policyGenerated = false;
+    policyRuleName.value = "";
+    policyRuleEffect.value = "permit";
+    policyRuleEnabled.checked = true;
+    policyRowFilterExpression.value = "";
+    policyColumnMaskExpression.value = "";
+    policyStaticDataEnabled.checked = false;
+    policyStaticDataEditor.hidden = true;
+    policyStaticDataJson.value = "{}";
+    policyConditionList.replaceChildren();
+    policyEditorStatus.textContent = "";
+    policyResourceStatus.textContent = "Resources have not been loaded.";
+    policyResourceSelection.textContent =
+        "Select a resource to view its hierarchy and available attributes.";
+    policyValidationList.replaceChildren();
+    const initialValidation = document.createElement("li");
+    initialValidation.className = "is-neutral";
+    initialValidation.textContent = "Add a rule, then validate the configuration.";
+    policyValidationList.append(initialValidation);
+    policyRegoPreview.textContent = "Generate artifacts to inspect the policy rule file.";
+    policyDataPreview.textContent = "No static data configured; data.json will not be generated.";
+    policyConfigStatus.textContent =
+        "Apply rules to the local draft, then submit the policy to save it with its selected resource.";
+    policyDraftStatus.textContent = "Not generated";
+    policySubmissionResult.hidden = true;
+    policySubmissionResultDetails.replaceChildren();
+    policySubmissionResultRules.replaceChildren();
+
+    policyConfigPanel.querySelectorAll("input, select, textarea, button").forEach((control) => {
+        control.disabled = false;
+    });
+    policyResourceSelect.value = "";
+    renderPolicyRuleEditor(null);
+    renderPolicyConditionRows();
+    renderPolicyRuleList();
+    renderPolicyResourceSelection();
+    if (policySubmissionInProgress) {
+        submitPolicyButton.disabled = true;
+    }
+}
+
+function appendPolicySubmissionDetail(container, label, value) {
+    const item = document.createElement("div");
+    item.className = "policy-submission-result-detail";
+    const term = document.createElement("span");
+    term.textContent = label;
+    const description = document.createElement("strong");
+    description.textContent = value == null || value === "" ? "—" : String(value);
+    item.append(term, description);
+    container.append(item);
+}
+
+function renderPolicySubmissionResult(result) {
+    const {policy, binding, rules} = result;
+    const resource = policyResources.find(
+        (candidate) => String(candidate.id) === String(binding.resourceId));
+    policySubmissionResultDetails.replaceChildren();
+    appendPolicySubmissionDetail(policySubmissionResultDetails, "Policy name", policy.policyName);
+    appendPolicySubmissionDetail(policySubmissionResultDetails, "Policy code", policy.policyCode);
+    appendPolicySubmissionDetail(policySubmissionResultDetails, "Policy ID", policy.id);
+    appendPolicySubmissionDetail(policySubmissionResultDetails, "Combining algorithm", policy.combiningAlgorithm);
+    appendPolicySubmissionDetail(
+        policySubmissionResultDetails,
+        "Resource",
+        resource ? policyResourcePath(resource) : `Resource ${binding.resourceId}`
+    );
+    appendPolicySubmissionDetail(policySubmissionResultDetails, "Resource ID", binding.resourceId);
+    appendPolicySubmissionDetail(policySubmissionResultDetails, "Resource type", binding.resourceType);
+    appendPolicySubmissionDetail(policySubmissionResultDetails, "Binding ID", binding.id);
+
+    policySubmissionResultRules.replaceChildren();
+    rules.forEach((rule) => {
+        const item = document.createElement("li");
+        const name = document.createElement("strong");
+        name.textContent = rule.ruleName || "Untitled rule";
+        const details = document.createElement("span");
+        details.textContent =
+            `${rule.ruleCode} · ${(rule.effect || "unknown").replace(/_/g, " ")} · ${rule.enabled ? "Enabled" : "Disabled"}`;
+        item.append(name, details);
+        policySubmissionResultRules.append(item);
+    });
+    policySubmissionResult.hidden = false;
+}
+
 async function submitPolicy() {
     if (policySubmissionInProgress || !validateCurrentPolicyDraft(false)) {
         return;
@@ -1725,6 +1831,7 @@ async function submitPolicy() {
     }
 
     policySubmissionInProgress = true;
+    const submissionRequestId = ++policySubmissionRequestId;
     const controls = Array.from(policyConfigPanel.querySelectorAll("input, select, textarea, button"));
     const disabledStates = controls.map((control) => control.disabled);
     controls.forEach((control) => {
@@ -1744,7 +1851,11 @@ async function submitPolicy() {
             throw new Error(await getApiError(response));
         }
         const result = await response.json();
+        if (submissionRequestId !== policySubmissionRequestId) {
+            return;
+        }
         if (!result || !result.policy || !result.policy.policyCode
+                || !result.binding || result.binding.resourceId == null
                 || !Array.isArray(result.rules) || result.rules.length !== policyRules.length) {
             throw new Error("The backend returned an incomplete policy response.");
         }
@@ -1757,20 +1868,27 @@ async function submitPolicy() {
         lastSubmittedPolicyRequest = requestBody;
         lastSubmittedPolicyCode = result.policy.policyCode;
         renderPolicyRuleList();
+        renderPolicySubmissionResult(result);
         policyConfigStatus.textContent =
             `Policy ${result.policy.policyCode} and ${result.rules.length} rule${result.rules.length === 1 ? "" : "s"} submitted. Generated artifacts remain local drafts.`;
     } catch (error) {
         const message = error instanceof Error ? error.message : "Could not submit the policy.";
-        policyConfigStatus.textContent = `Could not submit policy: ${message}`;
+        if (submissionRequestId === policySubmissionRequestId) {
+            policyConfigStatus.textContent = `Could not submit policy: ${message}`;
+        }
     } finally {
-        controls.forEach((control, index) => {
-            control.disabled = disabledStates[index];
-        });
+        if (submissionRequestId === policySubmissionRequestId) {
+            controls.forEach((control, index) => {
+                control.disabled = disabledStates[index];
+            });
+        } else {
+            submitPolicyButton.disabled = false;
+        }
         policySubmissionInProgress = false;
     }
 }
 
-function renderPublishedPolicies(policies) {
+function renderPublishedPolicies(policies, resourcesById = new Map()) {
     publishedPolicyList.replaceChildren();
     if (policies.length === 0) {
         const empty = document.createElement("p");
@@ -1794,6 +1912,14 @@ function renderPublishedPolicies(policies) {
         state.textContent = policy.enabled === false ? "Disabled" : "Enabled";
         const actions = document.createElement("div");
         actions.className = "published-policy-actions";
+        const previewButton = document.createElement("button");
+        previewButton.className = "secondary-button published-policy-preview";
+        previewButton.type = "button";
+        previewButton.textContent = "Preview";
+        previewButton.setAttribute("aria-label", `Preview policy ${policy.policyCode || policyName}`);
+        previewButton.addEventListener("click", () => {
+            previewPublishedPolicy(policy.id, policyName, previewButton);
+        });
         const deleteButton = document.createElement("button");
         deleteButton.className = "secondary-button published-policy-delete";
         deleteButton.type = "button";
@@ -1802,7 +1928,7 @@ function renderPublishedPolicies(policies) {
         deleteButton.dataset.policyName = policyName;
         deleteButton.dataset.policyCode = policy.policyCode || "";
         deleteButton.setAttribute("aria-label", `Delete policy ${policy.policyCode || policyName}`);
-        actions.append(state, deleteButton);
+        actions.append(state, previewButton, deleteButton);
         header.append(title, actions);
         card.append(header);
 
@@ -1827,7 +1953,14 @@ function renderPublishedPolicies(policies) {
         bindings.forEach((binding) => {
             const item = document.createElement("li");
             const resource = document.createElement("strong");
-            resource.textContent = `Resource ${binding.resourceId ?? "—"}`
+            const resourceDetails = binding.resourceId == null
+                ? null
+                : resourcesById.get(String(binding.resourceId));
+            const resourceName = resourceDetails
+                ? resourceDetails.resourceName || resourceDetails.resourceCode
+                : null;
+            resource.textContent = `${resourceName || `Resource ${binding.resourceId ?? "—"}`}`
+                + (resourceName && binding.resourceId != null ? ` · ID: ${binding.resourceId}` : "")
                 + (binding.resourceType ? ` · ${binding.resourceType}` : "");
             const details = document.createElement("span");
             details.textContent =
@@ -1872,9 +2005,15 @@ function renderPublishedPolicies(policies) {
             conditions.textContent = rule.conditionStr || "No conditions.";
             ruleCard.append(conditions);
             if (rule.expression) {
-                const expression = document.createElement("p");
+                const expression = document.createElement("div");
                 expression.className = "published-policy-expression";
-                expression.textContent = `Expression: ${rule.expression}`;
+                const expressionLabel = document.createElement("strong");
+                expressionLabel.className = "published-policy-expression-label";
+                expressionLabel.textContent = "Expression";
+                const expressionValue = document.createElement("pre");
+                expressionValue.className = "published-policy-expression-value";
+                expressionValue.textContent = rule.expression;
+                expression.append(expressionLabel, expressionValue);
                 ruleCard.append(expression);
             }
             if (rule.description) {
@@ -1895,6 +2034,43 @@ function renderPublishedPolicies(policies) {
         card.append(ruleSection);
         publishedPolicyList.append(card);
     });
+}
+
+async function previewPublishedPolicy(policyId, policyName, button) {
+    const requestId = ++publishedPolicyPreviewRequestId;
+    publishedPolicyPreviewTitle.textContent = `Preview: ${policyName}`;
+    publishedPolicyPreviewStatus.textContent = "Loading generated config...";
+    publishedPolicyPreviewConfig.textContent = "";
+    if (!publishedPolicyPreviewDialog.open) {
+        publishedPolicyPreviewDialog.showModal();
+    }
+    button.disabled = true;
+    try {
+        const response = await fetch(
+            `${apiBaseUrl}/api/abac/policies/${encodeURIComponent(String(policyId))}/config`,
+            {headers: {Authorization: `Bearer ${token}`}}
+        );
+        if (!response.ok) {
+            throw new Error(await getApiError(response));
+        }
+        const result = await response.json();
+        if (!result || typeof result.config !== "string" || !result.config.trim()) {
+            throw new Error("The backend returned no generated config.");
+        }
+        if (requestId !== publishedPolicyPreviewRequestId) {
+            return;
+        }
+        publishedPolicyPreviewConfig.textContent = result.config;
+        publishedPolicyPreviewStatus.textContent =
+            `Generated for ${result.resourceType || "internal"} resource ${result.resourceId ?? "—"}.`;
+    } catch (error) {
+        if (requestId === publishedPolicyPreviewRequestId) {
+            const message = error instanceof Error ? error.message : "Unable to generate the policy config.";
+            publishedPolicyPreviewStatus.textContent = `Could not load generated config: ${message}`;
+        }
+    } finally {
+        button.disabled = false;
+    }
 }
 
 async function loadPublishedPolicies() {
@@ -1920,10 +2096,41 @@ async function loadPublishedPolicies() {
         if (requestId !== policyListRequestId) {
             return;
         }
-        renderPublishedPolicies(policies);
-        publishPolicyStatus.textContent = policies.length === 0
-            ? "No saved policies were found."
-            : `Loaded ${policies.length} saved polic${policies.length === 1 ? "y" : "ies"}.`;
+        if (policies.length === 0) {
+            renderPublishedPolicies(policies);
+            publishPolicyStatus.textContent = "No saved policies were found.";
+            return;
+        }
+        let resourcesById = new Map();
+        let resourceLookupError = null;
+        try {
+            const resourcesResponse = await fetch(`${apiBaseUrl}/api/abac/resources`, {
+                headers: {Authorization: `Bearer ${token}`}
+            });
+            if (!resourcesResponse.ok) {
+                throw new Error(await getApiError(resourcesResponse));
+            }
+            const resources = await resourcesResponse.json();
+            if (!Array.isArray(resources)) {
+                throw new Error("The resource response was not a list.");
+            }
+            resourcesById = new Map(resources.map((resource) => [String(resource.id), resource]));
+        } catch (error) {
+            resourceLookupError = error instanceof Error
+                ? error.message
+                : "Unable to load resource names.";
+        }
+        if (requestId !== policyListRequestId) {
+            return;
+        }
+        renderPublishedPolicies(policies, resourcesById);
+        if (resourceLookupError) {
+            publishPolicyStatus.textContent =
+                `Loaded ${policies.length} saved polic${policies.length === 1 ? "y" : "ies"}, but resource names could not be loaded: ${resourceLookupError}`;
+        } else {
+            publishPolicyStatus.textContent =
+                `Loaded ${policies.length} saved polic${policies.length === 1 ? "y" : "ies"}.`;
+        }
     } catch (error) {
         if (requestId === policyListRequestId) {
             const message = error instanceof Error ? error.message : "Unable to load saved policies.";
@@ -2020,7 +2227,7 @@ function validatePolicyConfiguration(validateStaticData = true) {
         if (!rule.ruleName.trim()) {
             errors.push(`${rule.ruleCode}: rule name is required.`);
         }
-        if (rule.conditions.length === 0) {
+        if (rule.conditions.length === 0 && rule.effect !== "row_filtering") {
             errors.push(`${rule.ruleCode}: add at least one condition.`);
         }
         rule.conditions.forEach((condition, index) => {
@@ -3660,6 +3867,17 @@ validatePolicyConfigButton.addEventListener("click", validateCurrentPolicyDraft)
 generatePolicyRegoButton.addEventListener("click", generatePolicyPreview);
 submitPolicyButton.addEventListener("click", submitPolicy);
 loadPoliciesButton.addEventListener("click", loadPublishedPolicies);
+closePublishedPolicyPreviewButton.addEventListener("click", () => {
+    publishedPolicyPreviewDialog.close();
+});
+publishedPolicyPreviewDialog.addEventListener("close", () => {
+    publishedPolicyPreviewRequestId += 1;
+});
+publishedPolicyPreviewDialog.addEventListener("click", (event) => {
+    if (event.target === publishedPolicyPreviewDialog) {
+        publishedPolicyPreviewDialog.close();
+    }
+});
 publishedPolicyList.addEventListener("click", (event) => {
     const button = event.target.closest(".published-policy-delete[data-policy-id]");
     if (button) {

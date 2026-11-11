@@ -55,13 +55,12 @@ columnMask := {"expression": "CAST(concat('**', substr(customer_name, 3)) AS var
     column.columnName == "customer_name"
 }
 
-rowFilters contains {"expression": sprintf("country_code = '%s'", [region])} if {
+rowFilters contains {"expression": sprintf("country_code = '%s'", [verified_claims.region])} if {
     table := input.action.resource.table
+
     table.catalogName == "local_pg"
     table.schemaName == "public"
     table.tableName == "customers"
 
-    region := verified_claims.region
-#    escapedRegion := replace(region, "'", "''")
 }
 

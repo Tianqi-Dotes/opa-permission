@@ -30,16 +30,19 @@ final class PolicyRuleSupport {
         if (!EFFECTS.contains(normalizedEffect)) {
             return "effect must be permit, deny, row_filtering, or column_masking";
         }
-        if (conditions == null || conditions.isEmpty()) {
+        if ((conditions == null || conditions.isEmpty())
+                && !normalizedEffect.equals("row_filtering")) {
             return "At least one condition is required";
         }
-        if (conditions.size() > MAX_CONDITIONS) {
+        if (conditions != null && conditions.size() > MAX_CONDITIONS) {
             return "A rule may contain at most 100 conditions";
         }
-        for (int index = 0; index < conditions.size(); index++) {
-            String conditionError = validateCondition(conditions.get(index), index);
-            if (conditionError != null) {
-                return conditionError;
+        if (conditions != null) {
+            for (int index = 0; index < conditions.size(); index++) {
+                String conditionError = validateCondition(conditions.get(index), index);
+                if (conditionError != null) {
+                    return conditionError;
+                }
             }
         }
         if ((normalizedEffect.equals("row_filtering") || normalizedEffect.equals("column_masking"))
@@ -50,6 +53,9 @@ final class PolicyRuleSupport {
     }
 
     static String compileConditions(List<AbacPolicyRuleController.ConditionRequest> conditions) {
+        if (conditions == null) {
+            return "";
+        }
         return conditions.stream()
                 .map(PolicyRuleSupport::compileCondition)
                 .collect(Collectors.joining("\n"));

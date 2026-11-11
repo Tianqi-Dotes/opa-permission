@@ -74,9 +74,9 @@ const pages = {
     "publish-policy": {
         section: "ABAC",
         title: "Publish",
-        description: "Review and publish the generated ABAC configuration.",
+        description: "Review saved policies, resource bindings, and associated rules.",
         featureTitle: "Publish policy",
-        featureDescription: "Review the generated Rego and validation results before making the configuration available.",
+        featureDescription: "Inspect each saved policy and the resource scope and rules associated with it.",
         symbol: "PU"
     },
     "query-trino": {
@@ -250,6 +250,10 @@ const policyValidationList = document.querySelector("#policy-validation-list");
 const policyRegoPreview = document.querySelector("#policy-rego-preview");
 const policyDataPreview = document.querySelector("#policy-data-preview");
 const policyConfigStatus = document.querySelector("#policy-config-status");
+const publishPolicyPanel = document.querySelector("#publish-policy-panel");
+const loadPoliciesButton = document.querySelector("#load-policies");
+const publishPolicyStatus = document.querySelector("#publish-policy-status");
+const publishedPolicyList = document.querySelector("#published-policy-list");
 const resourceAttributesPanel = document.querySelector("#resource-attributes-panel");
 const internalResourceTab = document.querySelector("#internal-resource-tab");
 const externalResourceTab = document.querySelector("#external-resource-tab");
@@ -355,6 +359,7 @@ let policyResourceRequestId = 0;
 let policySubmissionInProgress = false;
 let lastSubmittedPolicyRequest = null;
 let lastSubmittedPolicyCode = null;
+let policyListRequestId = 0;
 let bucketCreationInProgress = false;
 let datasourceCreationInProgress = false;
 let pipelineBucketRequestId = 0;
@@ -441,17 +446,18 @@ function showPage(pageKey) {
     const isSubjectAttributesPage = pageKey === "subject-attributes";
     const isResourceAttributesPage = pageKey === "resource-attributes";
     const isPolicyConfigPage = pageKey === "policy-config";
+    const isPublishPolicyPage = pageKey === "publish-policy";
     const isCreateBucketPage = pageKey === "create-bucket";
     const isCreateDatasourcePage = pageKey === "create-datasource";
     const isCreatePipelinePage = pageKey === "create-pipeline";
     const isTrinoQueryPage = pageKey === "query-trino";
     featureCard.hidden = isAssignRolesPage || isPermissionTestPage
         || isAttributeDictionaryPage || isAttributeTemplatesPage || isSubjectAttributesPage
-        || isResourceAttributesPage || isPolicyConfigPage || isCreateBucketPage
+        || isResourceAttributesPage || isPolicyConfigPage || isPublishPolicyPage || isCreateBucketPage
         || isCreateDatasourcePage || isCreatePipelinePage || isTrinoQueryPage;
     infoRow.hidden = isAssignRolesPage || isPermissionTestPage
         || isAttributeDictionaryPage || isAttributeTemplatesPage || isSubjectAttributesPage
-        || isResourceAttributesPage || isPolicyConfigPage || isCreateBucketPage
+        || isResourceAttributesPage || isPolicyConfigPage || isPublishPolicyPage || isCreateBucketPage
         || isCreateDatasourcePage || isCreatePipelinePage || isTrinoQueryPage;
     assignRolePanel.hidden = !isAssignRolesPage;
     permissionTestPanel.hidden = !isPermissionTestPage;
@@ -461,6 +467,7 @@ function showPage(pageKey) {
     subjectAttributesPanel.hidden = !isSubjectAttributesPage;
     resourceAttributesPanel.hidden = !isResourceAttributesPage;
     policyConfigPanel.hidden = !isPolicyConfigPage;
+    publishPolicyPanel.hidden = !isPublishPolicyPage;
     createBucketPanel.hidden = !isCreateBucketPage;
     createDatasourcePanel.hidden = !isCreateDatasourcePage;
     createPipelinePanel.hidden = !isCreatePipelinePage;
@@ -482,6 +489,9 @@ function showPage(pageKey) {
     if (isPolicyConfigPage) {
         loadPolicyResources();
         loadPolicyAttributeDefinitions();
+    }
+    if (isPublishPolicyPage) {
+        loadPublishedPolicies();
     }
     if (isCreatePipelinePage) {
         loadPipelineBuckets();
@@ -1758,6 +1768,158 @@ async function submitPolicy() {
         policySubmissionInProgress = false;
     }
 }
+
+function renderPublishedPolicies(policies) {
+    publishedPolicyList.replaceChildren();
+    if (policies.length === 0) {
+        const empty = document.createElement("p");
+        empty.className = "published-policy-empty";
+        empty.textContent = "No saved policies were found.";
+        publishedPolicyList.append(empty);
+        return;
+    }
+
+    policies.forEach(({policy, bindings, rules}) => {
+        const card = document.createElement("article");
+        card.className = "published-policy-card";
+
+        const header = document.createElement("div");
+        header.className = "published-policy-card-header";
+        const title = document.createElement("h3");
+        title.textContent = policy.policyName || policy.policyCode || `Policy ${policy.id}`;
+        const state = document.createElement("span");
+        state.className = `published-policy-state${policy.enabled === false ? " is-disabled" : ""}`;
+        state.textContent = policy.enabled === false ? "Disabled" : "Enabled";
+        header.append(title, state);
+        card.append(header);
+
+        const metadata = document.createElement("p");
+        metadata.className = "published-policy-meta";
+        metadata.textContent =
+            `Code: ${policy.policyCode || "—"} · ID: ${policy.id ?? "—"} · Combining: ${policy.combiningAlgorithm || "—"}`;
+        card.append(metadata);
+        if (policy.description) {
+            const description = document.createElement("p");
+            description.className = "published-policy-description";
+            description.textContent = policy.description;
+            card.append(description);
+        }
+
+        const bindingSection = document.createElement("section");
+        bindingSection.className = "published-policy-section";
+        const bindingHeading = document.createElement("h4");
+        bindingHeading.textContent = "Resource bindings";
+        const bindingList = document.createElement("ul");
+        bindingList.className = "published-policy-bindings";
+        bindings.forEach((binding) => {
+            const item = document.createElement("li");
+            const resource = document.createElement("strong");
+            resource.textContent = `Resource ${binding.resourceId ?? "—"}`
+                + (binding.resourceType ? ` · ${binding.resourceType}` : "");
+            const details = document.createElement("span");
+            details.textContent =
+                `Scope: ${binding.scopeType || "—"} · Tenant: ${binding.tenantId ?? "—"}`
+                + ` · ${binding.enabled === false ? "Disabled" : "Enabled"}`
+                + ` · Priority: ${binding.priority ?? "—"}`;
+            item.append(resource, details);
+            bindingList.append(item);
+        });
+        if (bindings.length === 0) {
+            const item = document.createElement("li");
+            item.textContent = "No resource binding.";
+            bindingList.append(item);
+        }
+        bindingSection.append(bindingHeading, bindingList);
+        card.append(bindingSection);
+
+        const ruleSection = document.createElement("section");
+        ruleSection.className = "published-policy-section";
+        const ruleHeading = document.createElement("h4");
+        ruleHeading.textContent = `Rules (${rules.length})`;
+        const ruleList = document.createElement("div");
+        ruleList.className = "published-policy-rules";
+        rules.forEach((rule) => {
+            const ruleCard = document.createElement("article");
+            ruleCard.className = "published-policy-rule";
+            const ruleHeader = document.createElement("div");
+            ruleHeader.className = "published-policy-rule-header";
+            const ruleName = document.createElement("strong");
+            ruleName.textContent = rule.ruleName || rule.ruleCode || `Rule ${rule.id}`;
+            const ruleEffect = document.createElement("span");
+            ruleEffect.textContent =
+                `${rule.effect || "unknown"} · ${rule.enabled === false ? "Disabled" : "Enabled"}`;
+            ruleHeader.append(ruleName, ruleEffect);
+            const ruleCode = document.createElement("p");
+            ruleCode.className = "published-policy-meta";
+            ruleCode.textContent = `Code: ${rule.ruleCode || "—"} · ID: ${rule.id ?? "—"}`;
+            ruleCard.append(ruleHeader, ruleCode);
+
+            const conditions = document.createElement("pre");
+            conditions.className = "published-policy-condition";
+            conditions.textContent = rule.conditionStr || "No conditions.";
+            ruleCard.append(conditions);
+            if (rule.expression) {
+                const expression = document.createElement("p");
+                expression.className = "published-policy-expression";
+                expression.textContent = `Expression: ${rule.expression}`;
+                ruleCard.append(expression);
+            }
+            if (rule.description) {
+                const description = document.createElement("p");
+                description.className = "published-policy-description";
+                description.textContent = rule.description;
+                ruleCard.append(description);
+            }
+            ruleList.append(ruleCard);
+        });
+        if (rules.length === 0) {
+            const emptyRules = document.createElement("p");
+            emptyRules.className = "published-policy-empty";
+            emptyRules.textContent = "No rules are associated with this policy.";
+            ruleList.append(emptyRules);
+        }
+        ruleSection.append(ruleHeading, ruleList);
+        card.append(ruleSection);
+        publishedPolicyList.append(card);
+    });
+}
+
+async function loadPublishedPolicies() {
+    const requestId = ++policyListRequestId;
+    loadPoliciesButton.disabled = true;
+    publishPolicyStatus.textContent = "Loading saved policies...";
+    try {
+        const response = await fetch(`${apiBaseUrl}/api/abac/policies`, {
+            headers: {Authorization: `Bearer ${token}`}
+        });
+        if (!response.ok) {
+            throw new Error(await getApiError(response));
+        }
+        const policies = await response.json();
+        if (!Array.isArray(policies)
+                || policies.some((entry) => !entry || !entry.policy
+                    || !Array.isArray(entry.bindings) || !Array.isArray(entry.rules))) {
+            throw new Error("The policy response did not contain a valid policy list.");
+        }
+        if (requestId !== policyListRequestId) {
+            return;
+        }
+        renderPublishedPolicies(policies);
+        publishPolicyStatus.textContent = policies.length === 0
+            ? "No saved policies were found."
+            : `Loaded ${policies.length} saved polic${policies.length === 1 ? "y" : "ies"}.`;
+    } catch (error) {
+        if (requestId === policyListRequestId) {
+            const message = error instanceof Error ? error.message : "Unable to load saved policies.";
+            publishPolicyStatus.textContent = `Could not load policies: ${message}`;
+        }
+    } finally {
+        if (requestId === policyListRequestId) {
+            loadPoliciesButton.disabled = false;
+        }
+    }
+}
+
 function parsePolicyConditionValue(condition) {
     if (condition.operator === "exists") {
         return null;
@@ -3434,6 +3596,7 @@ policyConfigName.addEventListener("input", invalidatePolicyPreview);
 validatePolicyConfigButton.addEventListener("click", validateCurrentPolicyDraft);
 generatePolicyRegoButton.addEventListener("click", generatePolicyPreview);
 submitPolicyButton.addEventListener("click", submitPolicy);
+loadPoliciesButton.addEventListener("click", loadPublishedPolicies);
 defaultTemplateTab.addEventListener("click", () => activateAttributeTemplateTab(defaultTemplateTab));
 tenantTemplateTab.addEventListener("click", () => activateAttributeTemplateTab(tenantTemplateTab));
 attributeTemplateViews.default.refreshButton.addEventListener(

@@ -1019,6 +1019,21 @@
                 </p>
             </section>
 
+            <section class="policy-config-panel publish-policy-panel" id="publish-policy-panel" hidden
+                     aria-labelledby="publish-policy-title">
+                <div class="policy-config-header">
+                    <div>
+                        <h2 id="publish-policy-title">Saved policies</h2>
+                        <p>Review each policy's resource binding and the rules submitted with it.</p>
+                    </div>
+                    <button class="secondary-button" id="load-policies" type="button">Refresh policies</button>
+                </div>
+                <p class="attribute-status" id="publish-policy-status" role="status" aria-live="polite">
+                    Policies have not been loaded.
+                </p>
+                <div class="published-policy-list" id="published-policy-list"></div>
+            </section>
+
             <div class="info-row" id="info-row" hidden>
                 <span class="info-icon" aria-hidden="true">i</span>
                 <p>Protected operations are evaluated by the active RBAC or ABAC policy.</p>

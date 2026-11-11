@@ -1,15 +1,19 @@
 package com.opa.permission.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.opa.permission.model.AbacPolicy;
 import com.opa.permission.model.AbacPolicyBinding;
 import com.opa.permission.model.AbacPolicyRule;
 import com.opa.permission.model.AbacResource;
+import com.opa.permission.service.AbacPolicyBindingService;
+import com.opa.permission.service.AbacPolicyRuleService;
 import com.opa.permission.service.AbacPolicyService;
 import com.opa.permission.service.AbacResourceService;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -18,8 +22,10 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/abac/policies")
@@ -29,12 +35,77 @@ public class AbacPolicyController {
             Set.of("deny_overrides", "permit_overrides", "first_applicable");
 
     private final AbacPolicyService abacPolicyService;
+    private final AbacPolicyBindingService abacPolicyBindingService;
+    private final AbacPolicyRuleService abacPolicyRuleService;
     private final AbacResourceService abacResourceService;
 
     public AbacPolicyController(AbacPolicyService abacPolicyService,
+                                AbacPolicyBindingService abacPolicyBindingService,
+                                AbacPolicyRuleService abacPolicyRuleService,
                                 AbacResourceService abacResourceService) {
         this.abacPolicyService = abacPolicyService;
+        this.abacPolicyBindingService = abacPolicyBindingService;
+        this.abacPolicyRuleService = abacPolicyRuleService;
         this.abacResourceService = abacResourceService;
+    }
+
+    @GetMapping
+    public ResponseEntity<List<PolicyDetailsResponse>> list() {
+        List<AbacPolicy> policies = abacPolicyService.list(
+                new QueryWrapper<AbacPolicy>().orderByDesc("create_time").orderByDesc("id"));
+        if (policies.isEmpty()) {
+            return ResponseEntity.ok(List.of());
+        }
+
+        List<Long> policyIds = policies.stream().map(AbacPolicy::getId).toList();
+        List<AbacPolicyBinding> bindings = abacPolicyBindingService.list(
+                new QueryWrapper<AbacPolicyBinding>()
+                        .in("policy_id", policyIds)
+                        .orderByAsc("priority")
+                        .orderByAsc("id"));
+        List<AbacPolicyRule> rules = abacPolicyRuleService.list(
+                new QueryWrapper<AbacPolicyRule>()
+                        .in("policy_id", policyIds)
+                        .orderByAsc("id"));
+        Map<Long, List<AbacPolicyBinding>> bindingsByPolicy = bindings.stream()
+                .collect(Collectors.groupingBy(AbacPolicyBinding::getPolicyId));
+        Map<Long, List<AbacPolicyRule>> rulesByPolicy = rules.stream()
+                .collect(Collectors.groupingBy(AbacPolicyRule::getPolicyId));
+
+        List<PolicyDetailsResponse> response = policies.stream()
+                .map(policy -> new PolicyDetailsResponse(
+                        new PolicySummary(
+                                policy.getId(),
+                                policy.getPolicyCode(),
+                                policy.getPolicyName(),
+                                policy.getCombiningAlgorithm(),
+                                policy.getEnabled(),
+                                policy.getDescription(),
+                                policy.getCreateTime(),
+                                policy.getUpdateTime()),
+                        bindingsByPolicy.getOrDefault(policy.getId(), List.of()).stream()
+                                .map(binding -> new PolicyBindingSummary(
+                                        binding.getId(),
+                                        binding.getScopeType(),
+                                        binding.getTenantId(),
+                                        binding.getResourceId(),
+                                        binding.getResourceType(),
+                                        binding.getEnabled(),
+                                        binding.getPriority()))
+                                .toList(),
+                        rulesByPolicy.getOrDefault(policy.getId(), List.of()).stream()
+                                .map(rule -> new PolicyRuleSummary(
+                                        rule.getId(),
+                                        rule.getRuleCode(),
+                                        rule.getRuleName(),
+                                        rule.getEffect(),
+                                        rule.getEnabled(),
+                                        rule.getConditionStr(),
+                                        rule.getExpression(),
+                                        rule.getDescription()))
+                                .toList()))
+                .toList();
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping
@@ -166,6 +237,40 @@ public class AbacPolicyController {
     public record PolicySubmissionResponse(AbacPolicy policy,
                                            AbacPolicyBinding binding,
                                            List<AbacPolicyRule> rules) {
+    }
+
+    public record PolicyDetailsResponse(PolicySummary policy,
+                                        List<PolicyBindingSummary> bindings,
+                                        List<PolicyRuleSummary> rules) {
+    }
+
+    public record PolicySummary(Long id,
+                                String policyCode,
+                                String policyName,
+                                String combiningAlgorithm,
+                                Boolean enabled,
+                                String description,
+                                Long createTime,
+                                Long updateTime) {
+    }
+
+    public record PolicyBindingSummary(Long id,
+                                       String scopeType,
+                                       Long tenantId,
+                                       Long resourceId,
+                                       String resourceType,
+                                       Boolean enabled,
+                                       Integer priority) {
+    }
+
+    public record PolicyRuleSummary(Long id,
+                                    String ruleCode,
+                                    String ruleName,
+                                    String effect,
+                                    Boolean enabled,
+                                    String conditionStr,
+                                    String expression,
+                                    String description) {
     }
 
     public record ApiError(String message) {

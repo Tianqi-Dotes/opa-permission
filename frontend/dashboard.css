@@ -786,6 +786,126 @@ button {
     box-shadow: 0 5px 18px rgba(39, 60, 94, .035);
 }
 
+.published-policy-list {
+    display: grid;
+    gap: 14px;
+    margin-top: 16px;
+}
+
+.published-policy-card {
+    padding: 17px;
+    border: 1px solid #e5eaf2;
+    border-radius: 10px;
+    background: #fbfcfe;
+}
+
+.published-policy-card-header,
+.published-policy-rule-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.published-policy-card-header h3,
+.published-policy-section h4 {
+    margin: 0;
+    color: #27344a;
+    font-size: 13px;
+}
+
+.published-policy-state {
+    flex: 0 0 auto;
+    padding: 4px 8px;
+    border-radius: 999px;
+    color: #23734d;
+    background: #e8f6ee;
+    font-size: 9px;
+    font-weight: 700;
+}
+
+.published-policy-state.is-disabled {
+    color: #7b8493;
+    background: #edf0f4;
+}
+
+.published-policy-meta,
+.published-policy-description,
+.published-policy-expression {
+    margin: 7px 0 0;
+    color: #78869d;
+    font-size: 10px;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+}
+
+.published-policy-section {
+    margin-top: 16px;
+}
+
+.published-policy-bindings {
+    display: grid;
+    gap: 7px;
+    margin: 8px 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.published-policy-bindings li {
+    display: grid;
+    gap: 3px;
+    padding: 9px 11px;
+    border: 1px solid #e9edf4;
+    border-radius: 7px;
+    background: #fff;
+    color: #78869d;
+    font-size: 10px;
+}
+
+.published-policy-bindings strong,
+.published-policy-rule-header strong {
+    color: #34425b;
+}
+
+.published-policy-rules {
+    display: grid;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.published-policy-rule {
+    min-width: 0;
+    padding: 11px;
+    border: 1px solid #e9edf4;
+    border-radius: 7px;
+    background: #fff;
+}
+
+.published-policy-rule-header {
+    color: #78869d;
+    font-size: 10px;
+}
+
+.published-policy-condition {
+    max-height: 180px;
+    margin: 8px 0 0;
+    padding: 9px;
+    overflow: auto;
+    border-radius: 6px;
+    color: #4a5870;
+    background: #f5f7fb;
+    font: 10px/1.6 Consolas, "Courier New", monospace;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.published-policy-empty {
+    margin: 0;
+    padding: 16px;
+    color: #78869d;
+    font-size: 11px;
+}
+
 .policy-step-panel {
     margin-top: 17px;
     padding: 17px;

@@ -1597,6 +1597,15 @@ function applyPolicyRuleChanges() {
 
 function policyRuleApiReference(attribute) {
     const [category, ...path] = attribute.split(".");
+    if (category === "subject") {
+        return `verified_claims.${path.join(".")}`;
+    }
+    if (category === "resource") {
+        return `input.resource.${path.join(".")}`;
+    }
+    if (category === "action") {
+        return "input.action";
+    }
     return `input.${category}.${path.join(".")}`;
 }
 

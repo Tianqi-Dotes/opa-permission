@@ -209,6 +209,13 @@ public class AbacPolicyRuleController {
         if (normalized.startsWith("subject.")) {
             return "verified_claims." + normalized.substring("subject.".length());
         }
+        if (normalized.startsWith("resource.")) {
+            return "input." + normalized;
+        }
+        if (normalized.equals("action") || normalized.startsWith("action.")
+                || normalized.equals("input.action") || normalized.startsWith("input.action.")) {
+            return "input.action";
+        }
         return normalized;
     }
 

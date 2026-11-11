@@ -92,7 +92,8 @@ INSERT INTO test.attribute_definitions (
     ('tenant_id', 'resource', 'number', FALSE, TRUE, 'Owning tenant identifier; managed by the platform.', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
     ('classification', 'resource', 'number', FALSE, TRUE, 'Resource classification level used by ABAC policies.', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
     ('allowed_groups', 'resource', 'string', TRUE, TRUE, 'Groups allowed to access the resource.', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
-    ('environment', 'environment', 'string', FALSE, TRUE, 'Runtime environment name used by ABAC policies.', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT)
+    ('environment', 'environment', 'string', FALSE, TRUE, 'Runtime environment name used by ABAC policies.', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
+    ('resource_type', 'resource', 'string', FALSE, TRUE, 'Resource type assigned by the platform.', (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT, (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT)
 ON CONFLICT (category, name) DO UPDATE SET
     data_type = EXCLUDED.data_type,
     multi_valued = EXCLUDED.multi_valued,
@@ -372,10 +373,19 @@ INSERT INTO test.permission_default_attribute_writes (
     create_time,
     update_time
 ) VALUES
-    (22, 'project', 'resource', 5, '{{tenant_id}}', TRUE,
+    (22, 'project', 'resource',
+     (SELECT id FROM test.attribute_definitions WHERE category = 'resource' AND name = 'tenant_id'),
+     '{{tenant_id}}', TRUE,
      (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT,
      (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
-    (22, 'project', 'resource', 7, '{{group_name}}', TRUE,
+    (22, 'project', 'resource',
+     (SELECT id FROM test.attribute_definitions WHERE category = 'resource' AND name = 'allowed_groups'),
+     '{{group_name}}', TRUE,
+     (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT,
+     (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
+    (22, 'project', 'resource',
+     (SELECT id FROM test.attribute_definitions WHERE category = 'resource' AND name = 'resource_type'),
+     '{{resource_type}}', TRUE,
      (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT,
      (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT),
     (25, 'project', 'resource', 5, '{{tenant_id}}', TRUE,

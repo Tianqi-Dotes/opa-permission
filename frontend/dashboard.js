@@ -1277,6 +1277,12 @@ const policyOperatorOptions = [
     ["in", "Is in list"],
     ["exists", "Exists"]
 ];
+const policyAttributeSources = [
+    ["subject", "Subject"],
+    ["resource", "Resource"],
+    ["action", "Action"]
+];
+
 function invalidatePolicyPreview() {
     policyGenerated = false;
     policyDraftStatus.textContent = "Not generated";
@@ -1293,9 +1299,12 @@ function renderPolicySummary() {
         .filter((definition) => definition.category === "subject").length;
     const resourceAttributeCount = policyAttributeDefinitions
         .filter((definition) => definition.category === "resource").length;
+    const actionAttributeCount = policyAttributeDefinitions
+        .filter((definition) => definition.category === "action").length;
     policyTotalRules.textContent = String(policyRules.length);
     policyEnabledRules.textContent = String(enabledRules.length);
-    policyAttributeCounts.textContent = `${subjectAttributeCount} / ${resourceAttributeCount}`;
+    policyAttributeCounts.textContent =
+        `${subjectAttributeCount} / ${resourceAttributeCount} / ${actionAttributeCount}`;
     policyDraftStatus.textContent = policyGenerated ? "Preview ready" : "Not generated";
 }
 
@@ -1339,33 +1348,65 @@ function selectedPolicyRule() {
     return policyRules.find((rule) => rule.id === selectedPolicyRuleId) || null;
 }
 
+function policyConditionCategory(condition) {
+    const categoryFromAttribute = typeof condition.attribute === "string"
+        ? condition.attribute.split(".")[0]
+        : "";
+    const category = condition.attributeCategory || categoryFromAttribute;
+    return policyAttributeSources.some(([value]) => value === category) ? category : "subject";
+}
+
 function renderPolicyConditionRows() {
     policyConditionList.replaceChildren();
     editingPolicyConditions.forEach((condition, index) => {
         const row = document.createElement("div");
         row.className = "policy-condition-row";
 
+        const categoryLabel = document.createElement("label");
+        categoryLabel.className = "form-field";
+        const categoryCaption = document.createElement("span");
+        categoryCaption.textContent = "Attribute source";
+        const categorySelect = document.createElement("select");
+        const selectedCategory = policyConditionCategory(condition);
+        policyAttributeSources.forEach(([value, label]) => {
+            categorySelect.append(new Option(label, value));
+        });
+        categorySelect.value = selectedCategory;
+        categoryLabel.append(categoryCaption, categorySelect);
+
         const attributeLabel = document.createElement("label");
         attributeLabel.className = "form-field";
         const attributeCaption = document.createElement("span");
-        attributeCaption.textContent = "Subject attribute";
+        const selectedSource = policyAttributeSources.find(([value]) => value === selectedCategory);
+        attributeCaption.textContent = `${selectedSource[1]} attribute`;
         const attributeSelect = document.createElement("select");
         attributeSelect.required = true;
-        attributeSelect.append(new Option("Select a subject attribute", ""));
-        policyAttributeDefinitions
-            .filter((definition) => definition.category === "subject")
-            .forEach((definition) => {
-                attributeSelect.append(new Option(
-                    `${definition.name} (${definition.dataType})`,
-                    `subject.${definition.name}`
-                ));
-            });
+        const sourceDefinitions = policyAttributeDefinitions
+            .filter((definition) => definition.category === selectedCategory);
+        attributeSelect.append(new Option(
+            sourceDefinitions.length
+                ? `Select a ${selectedSource[1].toLowerCase()} attribute`
+                : `No ${selectedSource[1].toLowerCase()} attributes defined`,
+            ""
+        ));
+        sourceDefinitions.forEach((definition) => {
+            attributeSelect.append(new Option(
+                `${definition.name} (${definition.dataType})`,
+                `${selectedCategory}.${definition.name}`
+            ));
+        });
         attributeSelect.value = condition.attribute;
         attributeSelect.addEventListener("change", () => {
             condition.attribute = attributeSelect.value;
             invalidatePolicyPreview();
         });
         attributeLabel.append(attributeCaption, attributeSelect);
+        categorySelect.addEventListener("change", () => {
+            condition.attributeCategory = categorySelect.value;
+            condition.attribute = "";
+            renderPolicyConditionRows();
+            invalidatePolicyPreview();
+        });
 
         const operatorLabel = document.createElement("label");
         operatorLabel.className = "form-field";
@@ -1456,7 +1497,8 @@ function renderPolicyConditionRows() {
         });
 
         operatorLabel.append(operatorCaption, operatorSelect);
-        row.append(attributeLabel, operatorLabel, valueTypeLabel, resourceAttributeLabel, valueLabel, removeButton);
+        row.append(categoryLabel, attributeLabel, operatorLabel, valueTypeLabel,
+            resourceAttributeLabel, valueLabel, removeButton);
         policyConditionList.append(row);
     });
 }

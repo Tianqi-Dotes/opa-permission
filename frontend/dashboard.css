@@ -1190,8 +1190,9 @@ button {
 
 .policy-condition-row {
     display: grid;
-    grid-template-columns: minmax(155px, 1.2fr) minmax(115px, .8fr)
-        minmax(130px, .9fr) minmax(150px, 1.2fr) minmax(150px, 1.2fr) auto;
+    grid-template-columns: minmax(105px, .7fr) minmax(155px, 1.2fr)
+        minmax(115px, .8fr) minmax(130px, .9fr) minmax(150px, 1.2fr)
+        minmax(150px, 1.2fr) auto;
     align-items: end;
     gap: 9px;
     padding: 11px;

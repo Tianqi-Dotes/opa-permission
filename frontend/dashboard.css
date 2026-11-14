@@ -914,58 +914,130 @@ button {
     margin-top: 16px;
 }
 
+.published-policy-binding-section {
+    padding: 13px;
+    border: 1px solid #cfe0f5;
+    border-radius: 9px;
+    background: #f3f8ff;
+}
+
+.published-policy-binding-section h4 {
+    color: #245b98;
+    font-size: 12px;
+}
+
 .published-policy-bindings {
     display: grid;
-    gap: 7px;
-    margin: 8px 0 0;
+    gap: 9px;
+    margin: 10px 0 0;
     padding: 0;
     list-style: none;
 }
 
-.published-policy-bindings li {
+.published-policy-binding-section .published-policy-bindings li {
     display: grid;
-    gap: 3px;
-    padding: 9px 11px;
-    border: 1px solid #e9edf4;
-    border-radius: 7px;
+    gap: 4px;
+    padding: 11px 12px;
+    border: 1px solid #d8e5f4;
+    border-left: 4px solid #4285d4;
+    border-radius: 8px;
     background: #fff;
-    color: #78869d;
-    font-size: 10px;
+    color: #5d6e85;
+    font-size: 11px;
 }
 
-.published-policy-bindings strong,
+.published-policy-binding-resource {
+    color: #1e3a5f;
+    font-size: 12px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+.published-policy-binding-meta {
+    color: #718198;
+    font-size: 10px;
+    overflow-wrap: anywhere;
+}
+
+.published-policy-binding-details {
+    color: #536780;
+    font-size: 10px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+.published-policy-rule-section {
+    padding: 13px;
+    border: 1px solid #d8def1;
+    border-radius: 9px;
+    background: #f6f7ff;
+}
+
+.published-policy-rule-section h4 {
+    color: #3d4f96;
+    font-size: 12px;
+}
+
 .published-policy-rule-header strong {
     color: #34425b;
 }
 
 .published-policy-rules {
     display: grid;
-    gap: 8px;
-    margin-top: 8px;
+    gap: 10px;
+    margin-top: 10px;
 }
 
 .published-policy-rule {
     min-width: 0;
-    padding: 11px;
-    border: 1px solid #e9edf4;
-    border-radius: 7px;
+    padding: 12px;
+    border: 1px solid #dce1f0;
+    border-left: 4px solid #6878cf;
+    border-radius: 8px;
     background: #fff;
+    box-shadow: 0 2px 6px rgba(48, 62, 117, .045);
 }
 
 .published-policy-rule-header {
+    align-items: center;
     color: #78869d;
     font-size: 10px;
+}
+
+.published-policy-rule-name {
+    min-width: 0;
+    color: #28375e;
+    font-size: 12px;
+    overflow-wrap: anywhere;
+}
+
+.published-policy-rule-effect {
+    flex: 0 0 auto;
+    padding: 4px 8px;
+    border: 1px solid #d8e1ff;
+    border-radius: 999px;
+    color: #3b56a0;
+    background: #edf1ff;
+    font-size: 9px;
+    font-weight: 700;
+}
+
+.published-policy-rule-effect.is-disabled {
+    border-color: #e0e4ea;
+    color: #737d8c;
+    background: #f0f2f5;
 }
 
 .published-policy-condition {
     max-height: 180px;
     margin: 8px 0 0;
-    padding: 9px;
+    padding: 10px;
     overflow: auto;
-    border-radius: 6px;
+    border: 1px solid #e1e6f0;
+    border-radius: 7px;
     color: #4a5870;
-    background: #f5f7fb;
-    font: 10px/1.6 Consolas, "Courier New", monospace;
+    background: #f7f8fc;
+    font: 11px/1.6 Consolas, "Courier New", monospace;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
 }

@@ -1947,7 +1947,7 @@ function renderPublishedPolicies(policies, resourcesById = new Map()) {
         }
 
         const bindingSection = document.createElement("section");
-        bindingSection.className = "published-policy-section";
+        bindingSection.className = "published-policy-section published-policy-binding-section";
         const bindingHeading = document.createElement("h4");
         bindingHeading.textContent = "Resource bindings";
         const bindingList = document.createElement("ul");
@@ -1955,21 +1955,31 @@ function renderPublishedPolicies(policies, resourcesById = new Map()) {
         bindings.forEach((binding) => {
             const item = document.createElement("li");
             const resource = document.createElement("strong");
+            resource.className = "published-policy-binding-resource";
             const resourceDetails = binding.resourceId == null
                 ? null
                 : resourcesById.get(String(binding.resourceId));
             const resourceName = resourceDetails
                 ? resourceDetails.resourceName || resourceDetails.resourceCode
                 : null;
-            resource.textContent = `${resourceName || `Resource ${binding.resourceId ?? "—"}`}`
-                + (resourceName && binding.resourceId != null ? ` · ID: ${binding.resourceId}` : "")
-                + (binding.resourceType ? ` · ${binding.resourceType}` : "");
+            resource.textContent = resourceName || `Resource ${binding.resourceId ?? "—"}`;
+            const resourceMeta = document.createElement("span");
+            resourceMeta.className = "published-policy-binding-meta";
+            resourceMeta.textContent = [
+                binding.resourceId == null ? "" : `ID: ${binding.resourceId}`,
+                binding.resourceType || ""
+            ].filter(Boolean).join(" · ");
             const details = document.createElement("span");
+            details.className = "published-policy-binding-details";
             details.textContent =
                 `Scope: ${binding.scopeType || "—"} · Tenant: ${binding.tenantId ?? "—"}`
                 + ` · ${binding.enabled === false ? "Disabled" : "Enabled"}`
                 + ` · Priority: ${binding.priority ?? "—"}`;
-            item.append(resource, details);
+            item.append(resource);
+            if (resourceMeta.textContent) {
+                item.append(resourceMeta);
+            }
+            item.append(details);
             bindingList.append(item);
         });
         if (bindings.length === 0) {
@@ -1981,7 +1991,7 @@ function renderPublishedPolicies(policies, resourcesById = new Map()) {
         card.append(bindingSection);
 
         const ruleSection = document.createElement("section");
-        ruleSection.className = "published-policy-section";
+        ruleSection.className = "published-policy-section published-policy-rule-section";
         const ruleHeading = document.createElement("h4");
         ruleHeading.textContent = `Rules (${rules.length})`;
         const ruleList = document.createElement("div");
@@ -1992,8 +2002,11 @@ function renderPublishedPolicies(policies, resourcesById = new Map()) {
             const ruleHeader = document.createElement("div");
             ruleHeader.className = "published-policy-rule-header";
             const ruleName = document.createElement("strong");
+            ruleName.className = "published-policy-rule-name";
             ruleName.textContent = rule.ruleName || rule.ruleCode || `Rule ${rule.id}`;
             const ruleEffect = document.createElement("span");
+            ruleEffect.className =
+                `published-policy-rule-effect${rule.enabled === false ? " is-disabled" : ""}`;
             ruleEffect.textContent =
                 `${rule.effect || "unknown"} · ${rule.enabled === false ? "Disabled" : "Enabled"}`;
             ruleHeader.append(ruleName, ruleEffect);

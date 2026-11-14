@@ -11,8 +11,8 @@ const message = document.querySelector("#form-message");
 passwordToggle.addEventListener("click", () => {
     const showPassword = passwordInput.type === "password";
     passwordInput.type = showPassword ? "text" : "password";
-    passwordToggle.textContent = showPassword ? "隐藏" : "显示";
-    passwordToggle.setAttribute("aria-label", showPassword ? "隐藏密码" : "显示密码");
+    passwordToggle.textContent = showPassword ? "Hide" : "Show";
+    passwordToggle.setAttribute("aria-label", showPassword ? "Hide password" : "Show password");
     passwordToggle.setAttribute("aria-pressed", String(showPassword));
     passwordInput.focus();
 });
@@ -25,13 +25,13 @@ form.addEventListener("submit", async (event) => {
     const username = usernameInput.value.trim();
     const password = passwordInput.value;
     if (!username || !password) {
-        message.textContent = "请输入用户名和密码。";
+        message.textContent = "Enter your username and password.";
         (!username ? usernameInput : passwordInput).focus();
         return;
     }
 
     submitButton.disabled = true;
-    buttonLabel.textContent = "正在登录…";
+    buttonLabel.textContent = "Signing in...";
 
     try {
         const response = await fetch(`${apiBaseUrl}/auth/login`, {
@@ -45,28 +45,28 @@ form.addEventListener("submit", async (event) => {
             try {
                 result = JSON.parse(responseText);
             } catch {
-                throw new Error("认证服务返回了无法识别的响应。");
+                throw new Error("The authentication service returned an unrecognized response.");
             }
         }
 
         if (!response.ok) {
             if (response.status === 401) {
-                throw new Error("用户名或密码不正确。");
+                throw new Error("Incorrect username or password.");
             }
-            throw new Error(result.message || `登录失败（${response.status}）。`);
+            throw new Error(result.message || `Sign-in failed (HTTP ${response.status}).`);
         }
         if (!result.accessToken) {
-            throw new Error("登录响应中没有 accessToken。");
+            throw new Error("The login response is missing an accessToken.");
         }
 
         sessionStorage.setItem("accessToken", result.accessToken);
         window.location.assign("./dashboard.html");
     } catch (error) {
         message.textContent = error instanceof TypeError
-            ? "无法连接认证服务，请检查服务地址和跨域配置。"
-            : error.message || "登录失败，请稍后重试。";
+            ? "Unable to connect to the authentication service. Check the service URL and CORS settings."
+            : error.message || "Sign-in failed. Please try again later.";
     } finally {
         submitButton.disabled = false;
-        buttonLabel.textContent = "登录";
+        buttonLabel.textContent = "Sign in";
     }
 });

@@ -20,6 +20,7 @@ body {
     min-height: 100vh;
     margin: 0;
     background: #f5f7fb;
+    font-size: 14px;
 }
 
 button {
@@ -35,7 +36,7 @@ button {
     position: fixed;
     z-index: 5;
     display: flex;
-    width: 252px;
+    width: 276px;
     height: 100vh;
     flex-direction: column;
     padding: 27px 17px 18px;
@@ -50,7 +51,7 @@ button {
     gap: 10px;
     margin: 1px 0 49px 8px;
     color: var(--navy);
-    font-size: 15px;
+    font-size: 19px;
     font-weight: 700;
     letter-spacing: -.3px;
     text-decoration: none;
@@ -112,7 +113,7 @@ button {
 .nav-group-heading {
     margin: 0 0 3px 12px;
     color: #a1aabb;
-    font-size: 9px;
+    font-size: 12px;
     font-weight: 700;
     letter-spacing: 1.6px;
 }
@@ -134,7 +135,7 @@ button {
     color: #758197;
     background: transparent;
     cursor: pointer;
-    font-size: 12px;
+    font-size: 15px;
     font-weight: 500;
     text-align: left;
     transition: color .16s ease, background .16s ease;
@@ -153,15 +154,15 @@ button {
 
 .nav-icon {
     display: grid;
-    width: 25px;
-    height: 25px;
-    flex: 0 0 25px;
+    width: 30px;
+    height: 30px;
+    flex: 0 0 30px;
     place-items: center;
     border: 1px solid #e8edf5;
     border-radius: 7px;
     color: #8693a8;
     background: #fff;
-    font-size: 8px;
+    font-size: 11px;
     font-weight: 700;
     letter-spacing: -.3px;
 }
@@ -184,7 +185,7 @@ button {
     align-items: center;
     gap: 8px;
     color: #8995a7;
-    font-size: 10px;
+    font-size: 13px;
 }
 
 .status-dot {
@@ -206,7 +207,7 @@ button {
     color: #8995a7;
     background: transparent;
     cursor: pointer;
-    font-size: 11px;
+    font-size: 14px;
     text-align: left;
 }
 
@@ -218,7 +219,7 @@ button {
     min-width: 0;
     min-height: 100vh;
     flex: 1;
-    margin-left: 252px;
+    margin-left: 276px;
 }
 
 .topbar {
@@ -236,7 +237,7 @@ button {
     align-items: center;
     gap: 10px;
     color: #9aa5b5;
-    font-size: 11px;
+    font-size: 14px;
 }
 
 .breadcrumb strong {
@@ -253,19 +254,19 @@ button {
     align-items: center;
     gap: 9px;
     color: #617087;
-    font-size: 11px;
+    font-size: 14px;
 }
 
 .avatar {
     display: grid;
-    width: 30px;
-    height: 30px;
+    width: 34px;
+    height: 34px;
     place-items: center;
     border: 1px solid #e0e8fa;
     border-radius: 50%;
     color: #4166c6;
     background: #edf2ff;
-    font-size: 11px;
+    font-size: 14px;
     font-weight: 600;
 }
 
@@ -274,7 +275,7 @@ button {
 }
 
 .content-area {
-    width: min(100%, 1050px);
+    width: min(100%, 1140px);
     margin: 0 auto;
     padding: 55px 46px 30px;
 }
@@ -285,7 +286,7 @@ button {
 
 .page-kicker {
     color: #7890c9;
-    font-size: 9px;
+    font-size: 12px;
     font-weight: 700;
     letter-spacing: 1.8px;
 }
@@ -293,7 +294,7 @@ button {
 .page-heading h1 {
     margin: 12px 0 7px;
     color: #1d2b43;
-    font-size: 26px;
+    font-size: 31px;
     font-weight: 600;
     letter-spacing: -.7px;
 }
@@ -301,7 +302,7 @@ button {
 .page-heading p {
     margin: 0;
     color: #8995a7;
-    font-size: 12px;
+    font-size: 15px;
     line-height: 1.7;
 }
 
@@ -329,7 +330,7 @@ button {
     border-radius: 12px;
     color: #416ee8;
     background: #f1f5ff;
-    font-size: 11px;
+    font-size: 14px;
     font-weight: 700;
 }
 
@@ -345,7 +346,7 @@ button {
     align-items: center;
     gap: 8px;
     color: #8b97a9;
-    font-size: 9px;
+    font-size: 12px;
     font-weight: 600;
     letter-spacing: 1px;
 }
@@ -353,7 +354,7 @@ button {
 .feature-copy h2 {
     margin: 18px 0 9px;
     color: #27354d;
-    font-size: 17px;
+    font-size: 21px;
     font-weight: 600;
 }
 
@@ -361,7 +362,7 @@ button {
     max-width: 450px;
     margin: 0;
     color: #8793a6;
-    font-size: 12px;
+    font-size: 15px;
     line-height: 1.8;
 }
 
@@ -406,14 +407,14 @@ button {
     border: 1px solid #b8c9f4;
     border-radius: 50%;
     color: #6d88cd;
-    font-size: 10px;
+    font-size: 13px;
     font-weight: 600;
 }
 
 .info-row p {
     margin: 0;
     color: #78869d;
-    font-size: 10px;
+    font-size: 13px;
     line-height: 1.6;
 }
 
@@ -485,13 +486,13 @@ button {
 .pipeline-account-result h3 {
     margin: 0 0 12px;
     color: #27364f;
-    font-size: 13px;
+    font-size: 16px;
 }
 
 .pipeline-decision-card p {
     margin: 8px 0;
     color: #64728a;
-    font-size: 11px;
+    font-size: 14px;
     line-height: 1.6;
     overflow-wrap: anywhere;
 }
@@ -499,7 +500,7 @@ button {
 .pipeline-decision-card h4 {
     margin: 15px 0 7px;
     color: #52617a;
-    font-size: 11px;
+    font-size: 14px;
 }
 
 .pipeline-decision-card pre {
@@ -511,7 +512,7 @@ button {
     border-radius: 7px;
     background: #f5f7fb;
     color: #34445e;
-    font: 11px/1.6 Consolas, "Courier New", monospace;
+    font: 14px/1.6 Consolas, "Courier New", monospace;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
 }
@@ -524,7 +525,7 @@ button {
 
 .pipeline-account-result code {
     color: #267345;
-    font-size: 13px;
+    font-size: 16px;
     font-weight: 600;
 }
 
@@ -537,6 +538,7 @@ button {
 .trino-query-form textarea {
     min-height: 200px;
     font-family: Consolas, "Courier New", monospace;
+    font-size: 15px;
     line-height: 1.5;
 }
 
@@ -548,7 +550,7 @@ button {
 .trino-query-status {
     margin: 14px 0 0;
     color: #78869d;
-    font-size: 12px;
+    font-size: 15px;
     line-height: 1.6;
 }
 
@@ -570,14 +572,14 @@ button {
 .assign-role-header h2 {
     margin: 0 0 6px;
     color: #27354d;
-    font-size: 15px;
+    font-size: 19px;
     font-weight: 600;
 }
 
 .assign-role-header p {
     margin: 0;
     color: #8793a6;
-    font-size: 11px;
+    font-size: 14px;
     line-height: 1.7;
 }
 
@@ -601,19 +603,20 @@ button {
     display: grid;
     gap: 7px;
     color: #64728a;
-    font-size: 10px;
+    font-size: 13px;
     font-weight: 600;
 }
 
 .form-field select {
     width: 100%;
-    min-height: 37px;
+    min-height: 40px;
     padding: 0 10px;
     border: 1px solid #dfe5ef;
     border-radius: 7px;
     color: #40506a;
     background: #fff;
     font: inherit;
+    font-size: 14px;
     font-weight: 400;
 }
 
@@ -626,7 +629,7 @@ button {
     min-height: 17px;
     margin: 15px 0 0;
     color: #78869d;
-    font-size: 10px;
+    font-size: 13px;
     line-height: 1.6;
 }
 
@@ -649,7 +652,7 @@ button {
 .permission-test-header h2 {
     margin: 0 0 6px;
     color: #27354d;
-    font-size: 15px;
+    font-size: 19px;
     font-weight: 600;
 }
 
@@ -657,7 +660,7 @@ button {
 .permission-test-note {
     margin: 0;
     color: #8793a6;
-    font-size: 11px;
+    font-size: 14px;
     line-height: 1.7;
 }
 
@@ -691,19 +694,19 @@ button {
 
 .permission-test-endpoint strong {
     color: #40506a;
-    font-size: 11px;
+    font-size: 14px;
     font-weight: 600;
 }
 
 .permission-test-endpoint code {
     overflow-wrap: anywhere;
     color: #8290a5;
-    font-size: 10px;
+    font-size: 13px;
 }
 
 .permission-test-result {
     color: #8995a7;
-    font-size: 10px;
+    font-size: 13px;
     font-weight: 600;
 }
 
@@ -725,12 +728,12 @@ button {
 
 .primary-button,
 .secondary-button {
-    min-height: 34px;
-    padding: 0 12px;
+    min-height: 38px;
+    padding: 0 14px;
     border: 1px solid transparent;
     border-radius: 7px;
     cursor: pointer;
-    font-size: 10px;
+    font-size: 14px;
     font-weight: 600;
     transition: background .16s ease, border-color .16s ease;
 }
@@ -765,7 +768,7 @@ button {
     min-height: 17px;
     margin: 14px 0 0;
     color: #78869d;
-    font-size: 10px;
+    font-size: 13px;
     line-height: 1.6;
 }
 
@@ -846,13 +849,13 @@ button {
 .published-policy-preview-header h2 {
     margin: 0;
     color: #27344a;
-    font-size: 15px;
+    font-size: 19px;
 }
 
 .published-policy-preview-status {
     margin: 0 0 9px;
     color: #78869d;
-    font-size: 10px;
+    font-size: 13px;
 }
 
 .published-policy-preview-config {
@@ -863,7 +866,7 @@ button {
     border-radius: 8px;
     color: #4a5870;
     background: #f5f7fb;
-    font: 11px/1.6 Consolas, "Courier New", monospace;
+    font: 14px/1.6 Consolas, "Courier New", monospace;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
 }
@@ -883,7 +886,7 @@ button {
 .published-policy-section h4 {
     margin: 0;
     color: #27344a;
-    font-size: 13px;
+    font-size: 16px;
 }
 
 .published-policy-state {
@@ -892,7 +895,7 @@ button {
     border-radius: 999px;
     color: #23734d;
     background: #e8f6ee;
-    font-size: 9px;
+    font-size: 12px;
     font-weight: 700;
 }
 
@@ -905,7 +908,7 @@ button {
 .published-policy-description {
     margin: 7px 0 0;
     color: #78869d;
-    font-size: 10px;
+    font-size: 13px;
     line-height: 1.6;
     overflow-wrap: anywhere;
 }
@@ -923,7 +926,7 @@ button {
 
 .published-policy-binding-section h4 {
     color: #245b98;
-    font-size: 12px;
+    font-size: 15px;
 }
 
 .published-policy-bindings {
@@ -943,25 +946,25 @@ button {
     border-radius: 8px;
     background: #fff;
     color: #5d6e85;
-    font-size: 11px;
+    font-size: 14px;
 }
 
 .published-policy-binding-resource {
     color: #1e3a5f;
-    font-size: 12px;
+    font-size: 15px;
     line-height: 1.5;
     overflow-wrap: anywhere;
 }
 
 .published-policy-binding-meta {
     color: #718198;
-    font-size: 10px;
+    font-size: 13px;
     overflow-wrap: anywhere;
 }
 
 .published-policy-binding-details {
     color: #536780;
-    font-size: 10px;
+    font-size: 13px;
     line-height: 1.5;
     overflow-wrap: anywhere;
 }
@@ -975,7 +978,7 @@ button {
 
 .published-policy-rule-section h4 {
     color: #3d4f96;
-    font-size: 12px;
+    font-size: 15px;
 }
 
 .published-policy-rule-header strong {
@@ -1001,13 +1004,13 @@ button {
 .published-policy-rule-header {
     align-items: center;
     color: #78869d;
-    font-size: 10px;
+    font-size: 13px;
 }
 
 .published-policy-rule-name {
     min-width: 0;
     color: #28375e;
-    font-size: 12px;
+    font-size: 15px;
     overflow-wrap: anywhere;
 }
 
@@ -1018,7 +1021,7 @@ button {
     border-radius: 999px;
     color: #3b56a0;
     background: #edf1ff;
-    font-size: 9px;
+    font-size: 12px;
     font-weight: 700;
 }
 
@@ -1037,7 +1040,7 @@ button {
     border-radius: 7px;
     color: #4a5870;
     background: #f7f8fc;
-    font: 11px/1.6 Consolas, "Courier New", monospace;
+    font: 14px/1.6 Consolas, "Courier New", monospace;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
 }
@@ -1055,7 +1058,7 @@ button {
     display: block;
     margin-bottom: 6px;
     color: #245b98;
-    font-size: 10px;
+    font-size: 13px;
     font-weight: 700;
     letter-spacing: .04em;
     text-transform: uppercase;
@@ -1066,7 +1069,7 @@ button {
     margin: 0;
     overflow: auto;
     color: #1d3554;
-    font: 12px/1.6 Consolas, "Courier New", monospace;
+    font: 15px/1.6 Consolas, "Courier New", monospace;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
 }
@@ -1075,7 +1078,7 @@ button {
     margin: 0;
     padding: 16px;
     color: #78869d;
-    font-size: 11px;
+    font-size: 14px;
 }
 
 .policy-step-panel {
@@ -1099,22 +1102,22 @@ button {
 
 .policy-step-number {
     display: inline-flex;
-    flex: 0 0 25px;
+    flex: 0 0 28px;
     align-items: center;
     justify-content: center;
-    width: 25px;
-    height: 25px;
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
     color: #fff;
     background: #416ee8;
-    font-size: 11px;
+    font-size: 14px;
     font-weight: 700;
 }
 
 .policy-step-heading h3 {
     margin: 1px 0 5px;
     color: #34445d;
-    font-size: 13px;
+    font-size: 16px;
     font-weight: 650;
 }
 
@@ -1124,7 +1127,7 @@ button {
 .policy-catalog-note {
     margin: 0;
     color: #8793a6;
-    font-size: 10px;
+    font-size: 13px;
     line-height: 1.65;
 }
 
@@ -1153,13 +1156,13 @@ button {
     border-radius: 7px;
     color: #718099;
     background: #f9fbfe;
-    font-size: 10px;
+    font-size: 13px;
     overflow-wrap: anywhere;
 }
 
 .policy-resource-selection strong {
     color: #34445d;
-    font-size: 11px;
+    font-size: 14px;
 }
 
 .policy-attribute-catalogs {
@@ -1182,7 +1185,7 @@ button {
 .policy-data-preview-panel h4 {
     margin: 0 0 9px;
     color: #34445d;
-    font-size: 11px;
+    font-size: 14px;
     font-weight: 650;
 }
 
@@ -1200,13 +1203,13 @@ button {
     border-radius: 14px;
     color: #52617a;
     background: #f8faff;
-    font-size: 9px;
+    font-size: 12px;
 }
 
 .policy-catalog-empty {
     margin: 0;
     color: #9aa5b5;
-    font-size: 10px;
+    font-size: 13px;
 }
 
 .policy-catalog-note {
@@ -1218,7 +1221,7 @@ button {
     align-items: center;
     gap: 8px;
     color: #52617a;
-    font-size: 10px;
+    font-size: 13px;
     font-weight: 600;
 }
 
@@ -1259,7 +1262,7 @@ button {
     border-radius: 6px;
     color: #34445d;
     font-family: Consolas, "Courier New", monospace;
-    font-size: 10px;
+    font-size: 13px;
     resize: vertical;
 }
 
@@ -1280,7 +1283,7 @@ button {
 .policy-config-header h2 {
     margin: 0 0 6px;
     color: #27354d;
-    font-size: 15px;
+    font-size: 19px;
     font-weight: 600;
 }
 
@@ -1289,7 +1292,7 @@ button {
 .policy-condition-header p {
     margin: 0;
     color: #8793a6;
-    font-size: 11px;
+    font-size: 14px;
     line-height: 1.7;
 }
 
@@ -1307,7 +1310,7 @@ button {
     border-radius: 7px;
     color: #806433;
     background: #fffaf0;
-    font-size: 10px;
+    font-size: 13px;
     line-height: 1.6;
 }
 
@@ -1330,7 +1333,7 @@ button {
 .policy-submission-result-rules h4 {
     margin: 0;
     color: #285d43;
-    font-size: 13px;
+    font-size: 16px;
 }
 
 .policy-submission-result-heading span {
@@ -1338,7 +1341,7 @@ button {
     border-radius: 999px;
     color: #23734d;
     background: #e2f4e9;
-    font-size: 9px;
+    font-size: 12px;
     font-weight: 700;
 }
 
@@ -1362,7 +1365,7 @@ button {
 
 .policy-submission-result-detail span {
     color: #788a7e;
-    font-size: 9px;
+    font-size: 12px;
     font-weight: 600;
     text-transform: uppercase;
 }
@@ -1370,7 +1373,7 @@ button {
 .policy-submission-result-detail strong,
 .policy-submission-result-rules li span {
     color: #34445d;
-    font-size: 10px;
+    font-size: 13px;
     overflow-wrap: anywhere;
 }
 
@@ -1398,7 +1401,7 @@ button {
 
 .policy-submission-result-rules li strong {
     color: #34445d;
-    font-size: 10px;
+    font-size: 13px;
     overflow-wrap: anywhere;
 }
 
@@ -1427,14 +1430,14 @@ button {
 
 .policy-summary-card span {
     color: #8995a7;
-    font-size: 9px;
+    font-size: 12px;
     font-weight: 600;
     text-transform: uppercase;
 }
 
 .policy-summary-card strong {
     color: #34445d;
-    font-size: 15px;
+    font-size: 19px;
     font-weight: 650;
 }
 
@@ -1463,7 +1466,7 @@ button {
 .policy-section-header h3 {
     margin: 0 0 5px;
     color: #34445d;
-    font-size: 12px;
+    font-size: 15px;
     font-weight: 650;
 }
 
@@ -1494,13 +1497,13 @@ button {
 
 .policy-rule-card strong {
     color: #34445d;
-    font-size: 11px;
+    font-size: 14px;
 }
 
 .policy-rule-code,
 .policy-rule-meta {
     color: #8995a7;
-    font-size: 9px;
+    font-size: 12px;
     overflow-wrap: anywhere;
 }
 
@@ -1515,7 +1518,7 @@ button {
     gap: 8px;
     padding: 24px 12px;
     color: #8995a7;
-    font-size: 10px;
+    font-size: 13px;
     line-height: 1.6;
     text-align: center;
 }
@@ -1528,7 +1531,7 @@ button {
 
 .policy-empty-editor strong {
     color: #52617a;
-    font-size: 12px;
+    font-size: 15px;
 }
 
 .policy-rule-fields {
@@ -1545,7 +1548,7 @@ button {
     gap: 8px;
     min-height: 37px;
     color: #64728a;
-    font-size: 10px;
+    font-size: 13px;
     font-weight: 600;
 }
 
@@ -1562,7 +1565,7 @@ button {
 .policy-condition-header h4 {
     margin: 0 0 5px;
     color: #34445d;
-    font-size: 11px;
+    font-size: 14px;
 }
 
 .policy-condition-list {
@@ -1615,7 +1618,7 @@ button {
 .policy-validation-list li {
     padding: 8px 10px;
     border-radius: 6px;
-    font-size: 10px;
+    font-size: 13px;
     line-height: 1.5;
     overflow-wrap: anywhere;
 }
@@ -1644,7 +1647,7 @@ button {
     border-radius: 7px;
     color: #d7e3ff;
     background: #17243a;
-    font: 10px/1.65 Consolas, "Courier New", monospace;
+    font: 13px/1.65 Consolas, "Courier New", monospace;
     white-space: pre;
 }
 
@@ -1661,14 +1664,14 @@ button {
 .attribute-form h3 {
     margin: 0 0 6px;
     color: #27354d;
-    font-size: 15px;
+    font-size: 19px;
     font-weight: 600;
 }
 
 .attribute-dictionary-header p {
     margin: 0;
     color: #8793a6;
-    font-size: 11px;
+    font-size: 14px;
     line-height: 1.7;
 }
 
@@ -1687,7 +1690,7 @@ button {
     color: #758197;
     background: transparent;
     cursor: pointer;
-    font-size: 11px;
+    font-size: 14px;
     font-weight: 500;
 }
 
@@ -1713,14 +1716,14 @@ button {
 .attribute-template-content h3 {
     margin: 0 0 7px;
     color: #34445d;
-    font-size: 12px;
+    font-size: 15px;
     font-weight: 600;
 }
 
 .attribute-template-content p {
     margin: 0;
     color: #8793a6;
-    font-size: 11px;
+    font-size: 14px;
     line-height: 1.7;
 }
 
@@ -1747,7 +1750,7 @@ button {
 .attribute-template-detail-header h4 {
     margin: 0;
     color: #34445d;
-    font-size: 12px;
+    font-size: 15px;
 }
 
 .attribute-template-detail-grid {
@@ -1755,7 +1758,7 @@ button {
     grid-template-columns: minmax(110px, .35fr) minmax(0, 1fr);
     gap: 9px 16px;
     margin: 14px 0 0;
-    font-size: 11px;
+    font-size: 14px;
 }
 
 .attribute-template-detail-grid dt {
@@ -1789,7 +1792,7 @@ button {
     color: #758197;
     background: transparent;
     cursor: pointer;
-    font-size: 11px;
+    font-size: 14px;
     font-weight: 500;
 }
 
@@ -1829,13 +1832,14 @@ button {
 .form-field input,
 .form-field textarea {
     width: 100%;
-    min-height: 37px;
+    min-height: 40px;
     padding: 9px 10px;
     border: 1px solid #dfe5ef;
     border-radius: 7px;
     color: #40506a;
     background: #fff;
     font: inherit;
+    font-size: 14px;
     font-weight: 400;
 }
 
@@ -1883,7 +1887,7 @@ button {
 .trino-resource-picker-header p {
     margin: 0;
     color: #64728a;
-    font-size: 11px;
+    font-size: 14px;
 }
 
 .trino-resource-tree {
@@ -1894,7 +1898,7 @@ button {
     border: 1px solid #edf0f5;
     border-radius: 6px;
     color: #40506a;
-    font-size: 11px;
+    font-size: 14px;
 }
 
 .trino-resource-tree-list {
@@ -1931,7 +1935,7 @@ button {
     width: fit-content;
     color: #8995a7;
     cursor: pointer;
-    font-size: 9px;
+    font-size: 12px;
 }
 
 .attribute-checkbox-field {
@@ -1941,7 +1945,7 @@ button {
     gap: 8px;
     min-height: 37px;
     color: #64728a;
-    font-size: 10px;
+    font-size: 13px;
     font-weight: 600;
 }
 
@@ -1974,13 +1978,13 @@ button {
     padding: 12px 10px;
     border-bottom: 1px solid #edf0f5;
     color: #596880;
-    font-size: 11px;
+    font-size: 14px;
     vertical-align: middle;
 }
 
 .attribute-table th {
     color: #8995a7;
-    font-size: 9px;
+    font-size: 12px;
     font-weight: 700;
     letter-spacing: .5px;
     text-transform: uppercase;
@@ -2012,7 +2016,7 @@ button {
     min-height: 17px;
     margin: 14px 0 0;
     color: #78869d;
-    font-size: 10px;
+    font-size: 13px;
     line-height: 1.6;
 }
 
@@ -2029,7 +2033,7 @@ button {
 .page-footer {
     margin-top: 55px;
     color: #a3adbb;
-    font-size: 9px;
+    font-size: 12px;
 }
 
 .page-footer span {
@@ -2069,13 +2073,13 @@ button {
         color: #5d6c83;
         background: transparent;
         cursor: pointer;
-        font-size: 17px;
+        font-size: 21px;
     }
 
     .breadcrumb {
         flex: 1;
         gap: 7px;
-        font-size: 10px;
+        font-size: 13px;
     }
 
     .user-name {
@@ -2087,7 +2091,7 @@ button {
     }
 
     .page-heading h1 {
-        font-size: 23px;
+        font-size: 27px;
     }
 
     .feature-card {

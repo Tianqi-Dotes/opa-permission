@@ -5,6 +5,7 @@ import rego.v1
 default allow := false
 default project_allow := false
 default tenant_allow := false
+default tenant_policy_applies := false
 default effective_allow := false
 
 verified_claims := claims if {
@@ -45,7 +46,7 @@ authenticated if {
 #     verified_claims.tenant_id == 1
 # }
 
-# Add one tenant_allow rule body per resource that should be granted:
+# Add tenant_allow rules with the same tenant/resource scope and authorization conditions:
 # tenant_allow if {
 #     table := input.action.resource.table
 #     table.catalogName == "local_pg"
@@ -57,8 +58,20 @@ authenticated if {
 # }
 
 
-effective_allow := true if {
-    tenant_allow
+# Add a tenant_policy_applies rule for each tenant/resource scope with a tenant policy.
+# Copy only the tenant and resource scope conditions into this rule.
+# Do not include user or authorization conditions here. A matching scope makes tenant_allow
+# authoritative even when its authorization conditions do not match.
+# tenant_policy_applies if {
+#     table := input.action.resource.table
+#     table.catalogName == "local_pg"
+#     table.schemaName == "test"
+#     table.tableName == "users"
+#     verified_claims.tenant_id == 7
+# }
+
+effective_allow := tenant_allow if {
+    tenant_policy_applies
 } else := project_allow
 
 allow if {

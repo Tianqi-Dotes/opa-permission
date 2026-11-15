@@ -42,3 +42,19 @@ allow if {
 }
 
 #### customized rules
+
+rowFilters contains {"expression": sprintf("country_code = '%s'", [verified_claims.region])} if {
+    table := input.action.resource.table
+    table.catalogName == "local_pg"
+    table.schemaName == "public"
+    table.tableName == "customers"
+}
+
+columnMask := {"expression": "CAST(concat('**', substr(customer_name, 3)) AS varchar(100))"} if {
+    verified_claims.clearance == 3
+    column := input.action.resource.column
+    column.catalogName == "local_pg"
+    column.schemaName == "public"
+    column.tableName == "customers"
+    column.columnName == "customer_name"
+}

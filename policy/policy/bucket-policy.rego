@@ -18,9 +18,3 @@ verified_claims := claims if {
     claims := decoded[2]
 }
 
-
-allow if {
-    verified_claims.tenant_id == input.resource.tenant_id
-    input.action == "read"
-    input.resource.resource_type == "bucket"
-}
